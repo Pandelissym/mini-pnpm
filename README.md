@@ -1,5 +1,10 @@
 # mini-pnpm
 
+![](https://img.shields.io/badge/Learning%20Project-FE7A16?style=for-the-badge)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-3C873A?style=for-the-badge&logo=node.js&logoColor=white)
+![Inspiration](https://img.shields.io/badge/inspired%20by-pnpm-black?style=for-the-badge)
+
 A minimal package manager inspired by pnpm, built for learning.
 
 `mini-pnpm` resolves package versions from the npm registry, verifies tarball integrity, stores package contents in a global content store, and links dependencies into a local virtual store.
@@ -100,6 +105,23 @@ Display packages in the global store and total size.
 mini-pnpm store status
 ```
 
+## How it works
+
+1. Resolve package metadata from the npm registry.
+2. Resolve the final version from a requested version range/tag.
+3. Download and verify package tarball integrity.
+4. Extract package contents to the global store (`~/.mini-pnpm-store`).
+5. Hard-link package files into `node_modules/.pnpm/...`.
+6. Create top-level symlinks in `node_modules/<package>`.
+
+## Project scripts
+
+```bash
+npm run dev      # Run CLI via tsx
+npm run build    # Compile TypeScript to dist/
+npm test         # Placeholder (currently exits with error)
+```
+
 ## Project structure
 
 ```text
@@ -112,4 +134,4 @@ dist/             # Compiled output
 
 ## Notes
 
-- This project is for educational purposes.
+- This project is for educational purposes and does not implement the full pnpm feature set.
