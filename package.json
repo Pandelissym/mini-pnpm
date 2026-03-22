@@ -1,0 +1,23 @@
+{
+	"name": "mini-pnpm",
+	"version": "1.0.0",
+	"description": "A minimal version of pnpm for learning purposes",
+	"license": "ISC",
+	"author": "Pandelis Symeonidis",
+	"type": "module",
+	"bin": "./bin/mini-pnpm.js",
+	"scripts": {
+		"dev": "tsx src/cli.ts",
+		"build": "tsc"
+	},
+	"dependencies": {
+		"minimist": "1.2.8"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.8",
+		"@types/minimist": "^1.2.5",
+		"@types/node": "^25.5.0",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	}
+}
