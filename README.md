@@ -19,6 +19,19 @@ A minimal package manager inspired by pnpm, built for learning.
 - Link packages into `node_modules/.pnpm` and top-level symlinks in `node_modules`
 - Show store status and total store size
 
+### Planned features
+
+- [ ] Dependency graph installation
+- [ ] Increased security tarball download
+- [ ] Improved version resolution
+- [ ] Better CLI help output
+- [ ] Lockfile support
+- [ ] Workspaces support
+- [ ] Parallel downloads
+- [ ] Progress bar
+- [ ] Run scripts
+- [ ] Benchmark
+
 ## Requirements
 
 - Node.js 18+
