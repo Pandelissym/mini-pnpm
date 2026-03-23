@@ -1,9 +1,8 @@
-import assert from "node:assert";
 import { isValidMiniPnpmDirectory } from "../lib/getProjectRoot.js";
 import { installPackages } from "../lib/installPackages.js";
+import { logger } from "../lib/logger.js";
 import { readPackageJSON, writePackageJSON } from "../lib/packageJson.js";
 import type { ResolvedPackage } from "../lib/resolver.js";
-
 import type { CommandFunction, PackageJSON } from "../types.js";
 
 export const addCommand: CommandFunction = async (args, flags) => {
@@ -35,7 +34,7 @@ export const addCommand: CommandFunction = async (args, flags) => {
 	writePackageJSON(packageJson);
 
 	topLevelDeps.forEach((pkg) => {
-		console.log(`  ✓ ${pkg.name} ${pkg.version}`);
+		logger.info(`  ✓ ${pkg.name} ${pkg.version}`);
 	});
 };
 

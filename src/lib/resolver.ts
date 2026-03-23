@@ -1,5 +1,6 @@
 import { satisfies } from "semver";
 import type { PackageMetadataCache } from "../types.js";
+import { logger } from "./logger.js";
 import { fetchPackageMetadata, resolvePackageVersion } from "./registry.js";
 
 export type ResolutionGraph = Record<string, ResolvedPackage>;
@@ -40,7 +41,7 @@ export const resolveDeps = async (
 		queueEntries.delete(`${name}@${range}`);
 
 		// resolve this package
-		console.log(`Resolving package ${name} with range ${range}`);
+		logger.debug(`Resolving package ${name} with range ${range}`);
 		const packageMetadata = await fetchPackageMetadata(
 			name,
 			packageMetadataCache,
@@ -59,7 +60,7 @@ export const resolveDeps = async (
 			throw new Error("Unable to resolve version");
 		}
 
-		console.log(`Resolved to version ${resolvedVersion}`);
+		logger.debug(`Resolved to version ${resolvedVersion}`);
 
 		let requestedRange = range;
 		if (range === "latest") {
@@ -96,7 +97,7 @@ export const resolveDeps = async (
 			}
 		}
 
-		console.log();
+		logger.debug("");
 	}
 
 	// TODO: engines check?

@@ -1,5 +1,6 @@
 import pjson from "../../package.json" with { type: "json" };
+import { logger } from "./logger.js";
 
 export const printVersion = () => {
-	console.log(pjson.version);
+	logger.info(pjson.version);
 };

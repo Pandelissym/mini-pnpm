@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH } from "../constants.js";
 import { getDirSize } from "../lib/getDirSize.js";
+import { logger } from "../lib/logger.js";
 import type { CommandFunction } from "../types.js";
 
 export const storeCommandHandler: CommandFunction = async (args, _flags) => {
@@ -18,7 +19,7 @@ export const storeCommandHandler: CommandFunction = async (args, _flags) => {
 
 const storeStatusCommand = () => {
 	if (!fs.existsSync(GLOBAL_STORE_PATH)) {
-		console.log("Store is empty");
+		logger.info("Store is empty");
 		return;
 	}
 	let totalSize = 0;
@@ -29,11 +30,10 @@ const storeStatusCommand = () => {
 		const size = getDirSize(entryPath);
 		totalSize += size;
 
-		console.log(`${entry}   ${formatBytes(size)}`);
+		logger.info(`${entry}   ${formatBytes(size)}`);
 	}
 
-	console.log();
-	console.log(`Total store size: ${formatBytes(totalSize)}`);
+	logger.info(`Total store size: ${formatBytes(totalSize)}`);
 };
 
 const formatBytes = (bytes: number): string => {

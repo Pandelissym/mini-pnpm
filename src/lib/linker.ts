@@ -71,7 +71,6 @@ export const createTopLevelSymLink = (
 		`node_modules`,
 		name,
 	);
-	console.log(`Creating symlink`, { topLevelDir, target });
 
 	fs.symlinkSync(target, topLevelDir, "dir");
 };

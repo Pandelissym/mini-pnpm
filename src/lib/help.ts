@@ -1,3 +1,5 @@
+import { logger } from "./logger.js";
+
 const helpMessage = `
 mini-pnpm - a tiny package manager
 
@@ -7,5 +9,5 @@ Flags:
 `;
 
 export const printHelp = () => {
-	console.log(helpMessage);
+	logger.info(helpMessage);
 };
