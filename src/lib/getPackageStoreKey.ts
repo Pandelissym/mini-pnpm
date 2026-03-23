@@ -1,3 +1,3 @@
-export const getPackageStoreKey = (name: string): string => {
-	return name.replace(/\//g, "+");
+export const getPackageStoreKey = (name: string, version: string): string => {
+	return `${name.replace(/\//g, "+")}@${version}`;
 };

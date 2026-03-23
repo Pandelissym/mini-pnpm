@@ -1,17 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH } from "../constants.js";
+import { getPackageStoreKey } from "./getPackageStoreKey.js";
+import type { ResolutionGraph } from "./resolver.js";
 
-export const addToVirtualStore = (
-	name: string,
-	packageStoreKey: string,
-	version: string,
-) => {
+export const addToVirtualStore = (name: string, packageStoreKey: string) => {
 	const virtualStoreDir = path.join(
 		process.cwd(),
 		"node_modules",
 		".pnpm",
-		`${packageStoreKey}@${version}`,
+		`${packageStoreKey}`,
 		`node_modules`,
 		name,
 	);
@@ -20,10 +18,7 @@ export const addToVirtualStore = (
 		return;
 	}
 
-	const sourceDir = path.join(
-		GLOBAL_STORE_PATH,
-		`${packageStoreKey}@${version}`,
-	);
+	const sourceDir = path.join(GLOBAL_STORE_PATH, `${packageStoreKey}`);
 
 	hardLinkDir(sourceDir, virtualStoreDir);
 };
@@ -52,7 +47,7 @@ const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
 export const createTopLevelSymLink = (
 	name: string,
 	packageStoreKey: string,
-	version: string,
+	_version: string,
 ) => {
 	const topLevelDir = path.join(process.cwd(), "node_modules", name);
 
@@ -66,17 +61,58 @@ export const createTopLevelSymLink = (
 		return;
 	}
 
-	
 	fs.mkdirSync(path.dirname(topLevelDir), { recursive: true });
 
 	const target = path.join(
 		process.cwd(),
 		"node_modules",
 		".pnpm",
-		`${packageStoreKey}@${version}`,
+		packageStoreKey,
 		`node_modules`,
 		name,
 	);
+	console.log(`Creating symlink`, { topLevelDir, target });
 
 	fs.symlinkSync(target, topLevelDir, "dir");
+};
+
+export const linkSubDependencies = (graph: ResolutionGraph): void => {
+	for (const pkg of Object.values(graph)) {
+		const pkgStoreKey = getPackageStoreKey(pkg.name, pkg.version);
+
+		for (const [depName, depVersion] of Object.entries(pkg.dependencies)) {
+			const depPkgStoreKey = getPackageStoreKey(depName, depVersion);
+
+			const source = path.join(
+				process.cwd(),
+				"node_modules",
+				".pnpm",
+				pkgStoreKey,
+				`node_modules`,
+				depName,
+			);
+
+			let exists = false;
+			try {
+				fs.lstatSync(source);
+				exists = true;
+			} catch {}
+
+			if (exists) {
+				return;
+			}
+
+			fs.mkdirSync(path.dirname(source), { recursive: true });
+
+			const target = path.join(
+				process.cwd(),
+				"node_modules",
+				".pnpm",
+				depPkgStoreKey,
+				`node_modules`,
+				depName,
+			);
+			fs.symlinkSync(target, source, "dir");
+		}
+	}
 };

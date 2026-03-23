@@ -1,20 +1,14 @@
-import { getPackageStoreKey } from "../lib/getPackageStoreKey.js";
+import assert from "node:assert";
 import { isValidMiniPnpmDirectory } from "../lib/getProjectRoot.js";
-import { addToVirtualStore, createTopLevelSymLink } from "../lib/linker.js";
-import { verifyIntegrity } from "../lib/packageIntegrity.js";
+import { installPackages } from "../lib/installPackages.js";
 import { readPackageJSON, writePackageJSON } from "../lib/packageJson.js";
-import {
-	downloadTarball,
-	fetchPackageMetadata,
-	resolvePackageVersion,
-} from "../lib/registry.js";
-import { isInStore, storePackage } from "../lib/store.js";
-import { parseSemVerRange, versionRangeToString } from "../lib/versionRange.js";
-import type { CommandFunction, VersionRange } from "../types.js";
+import type { ResolvedPackage } from "../lib/resolver.js";
+
+import type { CommandFunction, PackageJSON } from "../types.js";
 
 export const addCommand: CommandFunction = async (args, flags) => {
-	const packageToAdd = args[0];
-	if (!packageToAdd) {
+	const packagesToAdd = args;
+	if (!packagesToAdd.length) {
 		throw new Error("A package to be added must be specified");
 	}
 
@@ -26,84 +20,74 @@ export const addCommand: CommandFunction = async (args, flags) => {
 
 	const isDevDep = flags["save-dev"];
 
-	let packageName: string;
-	let range: VersionRange;
-
-	const lastAtIndex = packageToAdd.lastIndexOf("@");
-	if (lastAtIndex === -1 || lastAtIndex === 0) {
-		packageName = packageToAdd;
-		range = {
-			operator: "^",
-			tag: "latest",
-		};
-	} else {
-		packageName = packageToAdd.slice(0, lastAtIndex);
-		range = parseSemVerRange(packageToAdd.slice(lastAtIndex + 1));
-	}
-
-	const packageMetadata = await fetchPackageMetadata(packageName);
-	const resolvedVersion = resolvePackageVersion(packageMetadata, range);
-
-	if (!resolvedVersion) {
-		throw new Error("Unable to resolve version");
-	}
-
-	const versionObject = packageMetadata.versions[resolvedVersion];
-
-	if (!versionObject) {
-		throw new Error("Unable to resolve version");
-	}
-	console.log(`Resolved version: ${resolvedVersion}`);
-	const packageStoreKey = getPackageStoreKey(packageName);
-
-	if (isInStore(packageStoreKey, resolvedVersion)) {
-		console.log("Package already exists in global store!");
-	} else {
-		const tarballURL = versionObject.dist.tarball;
-		const data = await downloadTarball(tarballURL);
-
-		console.log(`Downloaded tarball. Size: ${versionObject.dist.unpackedSize}`);
-
-		const isVerified = verifyIntegrity(data, versionObject.dist.integrity);
-
-		if (!isVerified) {
-			throw new Error("Package integrity check failed");
-		}
-
-		console.log(`Package integrity check: PASS`);
-
-		storePackage(
-			packageStoreKey,
-			resolvedVersion,
-			data,
-			versionObject.dist.integrity,
-		);
-	}
+	const pkgs = parseCLIPackageNameWithRanges(packagesToAdd);
+	const depGraph = await installPackages(pkgs);
 
 	// update package json
 	const packageJson = readPackageJSON();
-	if (isDevDep) {
-		if (!packageJson.devDependencies) {
-			packageJson.devDependencies = {};
-		}
-		packageJson.devDependencies[packageName] = versionRangeToString(
-			range,
-			resolvedVersion,
-		);
-	} else {
-		if (!packageJson.dependencies) {
-			packageJson.dependencies = {};
-		}
-		packageJson.dependencies[packageName] = versionRangeToString(
-			range,
-			resolvedVersion,
-		);
-	}
+
+	const topLevelDeps = Object.values(depGraph).filter(
+		(pkg) => pkg.isTopLevelDep,
+	);
+
+	addPackageJsonEntries(packageJson, topLevelDeps, isDevDep);
+
 	writePackageJSON(packageJson);
 
-	// add package to virtual store
-	addToVirtualStore(packageName, packageStoreKey, resolvedVersion);
-	createTopLevelSymLink(packageName, packageStoreKey, resolvedVersion);
+	topLevelDeps.forEach((pkg) => {
+		console.log(`  ✓ ${pkg.name} ${pkg.version}`);
+	});
+};
 
-	console.log(`  ✓ ${packageName}@${resolvedVersion}`);
+const parseCLIPackageNameWithRanges = (
+	entries: string[],
+): Record<string, string> => {
+	return Object.fromEntries(
+		entries.map((entry) => {
+			const { name, range } = parseCLIPackageNameWithRange(entry);
+			return [name, range];
+		}),
+	);
+};
+
+const parseCLIPackageNameWithRange = (
+	nameWithRange: string,
+): { name: string; range: string } => {
+	const lastAtIndex = nameWithRange.lastIndexOf("@");
+	let name: string;
+	let range: string;
+
+	if (lastAtIndex === -1 || lastAtIndex === 0) {
+		name = nameWithRange;
+		// if no range specifier is given default to latest
+		range = "latest";
+	} else {
+		name = nameWithRange.slice(0, lastAtIndex);
+		range = nameWithRange.slice(lastAtIndex + 1);
+	}
+
+	return {
+		name,
+		range,
+	};
+};
+
+const addPackageJsonEntries = (
+	packageJson: PackageJSON,
+	pkgs: ResolvedPackage[],
+	isDevDep: boolean,
+): void => {
+	const key: keyof PackageJSON = isDevDep ? "devDependencies" : "dependencies";
+
+	if (!packageJson[key]) {
+		packageJson[key] = {};
+	}
+
+	const newEntries = Object.fromEntries(
+		pkgs.map((pkg) => [pkg.name, pkg.requestedRange]),
+	);
+	packageJson[key] = {
+		...newEntries,
+		...packageJson[key],
+	};
 };

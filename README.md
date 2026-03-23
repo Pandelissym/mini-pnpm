@@ -21,9 +21,7 @@ A minimal package manager inspired by pnpm, built for learning.
 
 ### Planned features
 
-- [ ] Dependency graph installation
 - [ ] Increased security tarball download
-- [ ] Improved version resolution
 - [ ] Better CLI help output
 - [ ] Lockfile support
 - [ ] Workspaces support
@@ -31,6 +29,9 @@ A minimal package manager inspired by pnpm, built for learning.
 - [ ] Progress bar
 - [ ] Run scripts
 - [ ] Benchmark
+- [ ] Color coded cli
+- [ ] Support optional dependencies
+- [ ] Support peer dependencies
 
 ## Requirements
 

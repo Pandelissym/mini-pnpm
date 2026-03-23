@@ -9,7 +9,6 @@ import { GLOBAL_STORE_PATH } from "../constants.js";
  */
 
 export const extractTarball = (data: Buffer, destDir: string) => {
-	console.log(data.length);
 	const gunzipped = zlib.gunzipSync(data);
 
 	let offset = 0;
@@ -46,19 +45,17 @@ export const extractTarball = (data: Buffer, destDir: string) => {
 };
 
 export const storePackage = (
-	name: string,
-	version: string,
+	pkgStoreKey: string,
 	data: Buffer,
 	integrity: string,
 ): void => {
-	const destDir = `${GLOBAL_STORE_PATH}/${name}@${version}`;
+	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
 
 	if (fs.existsSync(destDir)) {
 		return;
 	}
 
-	const tempDir = `${GLOBAL_STORE_PATH}/.temp-${name}@${version}`;
-	console.log(tempDir);
+	const tempDir = `${GLOBAL_STORE_PATH}/.temp-${pkgStoreKey}`;
 	fs.mkdirSync(tempDir, { recursive: true });
 
 	extractTarball(data, tempDir);
@@ -67,8 +64,8 @@ export const storePackage = (
 	fs.renameSync(tempDir, destDir);
 };
 
-export const isInStore = (name: string, version: string): boolean => {
-	const packageDir = `${GLOBAL_STORE_PATH}/${name}@${version}`;
+export const isInStore = (name: string): boolean => {
+	const packageDir = `${GLOBAL_STORE_PATH}/${name}`;
 
 	return fs.existsSync(packageDir);
 };

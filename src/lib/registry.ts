@@ -1,11 +1,20 @@
 import https from "node:https";
+import semver from "semver";
 import { REGISTRY_URL } from "../constants.js";
-import type { RegistryPackageMetadata, VersionRange } from "../types.js";
-import { parseSemVerRange } from "./versionRange.js";
+import type {
+	PackageMetadataCache,
+	RegistryPackageMetadata,
+} from "../types.js";
 
 export const fetchPackageMetadata = async (
 	name: string,
+	manifestCache?: PackageMetadataCache,
 ): Promise<RegistryPackageMetadata> => {
+	const cachedManifest = manifestCache?.name;
+	if (cachedManifest) {
+		return cachedManifest;
+	}
+
 	const url = `${REGISTRY_URL}${name}`;
 	const response = await fetch(url, {
 		headers: {
@@ -23,45 +32,26 @@ export const fetchPackageMetadata = async (
 
 export const resolvePackageVersion = (
 	packageMetadata: RegistryPackageMetadata,
-	range: VersionRange,
+	range: string,
 ): string | undefined => {
-	const availableVersions = Object.keys(packageMetadata.versions);
-
-	if ("tag" in range) {
-		switch (range.tag) {
-			case "latest":
-				return packageMetadata["dist-tags"].latest;
-			default:
-				return undefined;
-		}
-	}
-	const semverString = `${range.major}.${range.minor}.${range.patch}`;
-	if (range.operator === "exact") {
-		return packageMetadata.versions[semverString]?.version;
-	}
-	const parsedAvailableVersions = availableVersions.map(parseSemVerRange);
-	if (range.operator === "^") {
-		const matchingMajorVersions = parsedAvailableVersions.filter(
-			(v) => v.major === range.major,
-		);
-		const match = matchingMajorVersions[matchingMajorVersions.length - 1];
-		if (match) {
-			return `${match.major}.${match.minor}.${match.patch}`;
-		}
+	const distTagVersion =
+		packageMetadata["dist-tags"][
+			range as keyof RegistryPackageMetadata["dist-tags"]
+		];
+	if (distTagVersion) {
+		return distTagVersion;
 	}
 
-	if (range.operator === "~") {
-		const matchingMajorAndMinorVersions = parsedAvailableVersions.filter(
-			(v) => v.major === range.major && v.minor === range.minor,
-		);
-		const match =
-			matchingMajorAndMinorVersions[matchingMajorAndMinorVersions.length - 1];
-		if (match) {
-			return `${match.major}.${match.minor}.${match.patch}`;
-		}
+	const availableVersions = Object.keys(packageMetadata.versions).filter(
+		(version) => semver.valid(version),
+	);
+
+	const resolved = semver.maxSatisfying(availableVersions, range);
+	if (!resolved) {
+		return undefined;
 	}
 
-	return undefined;
+	return packageMetadata.versions[resolved]?.version;
 };
 
 export const downloadTarball = async (url: string): Promise<Buffer> => {

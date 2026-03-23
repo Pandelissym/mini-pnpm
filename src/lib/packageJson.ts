@@ -14,7 +14,6 @@ export const readPackageJSON = (): PackageJSON => {
 
 	const file = readFileSync(PACKAGE_JSON_PATH, "utf8");
 
-	// TODO: Add validation?
 	const packageJson = JSON.parse(file);
 	return packageJson as PackageJSON;
 };

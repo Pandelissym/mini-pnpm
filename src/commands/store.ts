@@ -4,7 +4,7 @@ import { GLOBAL_STORE_PATH } from "../constants.js";
 import { getDirSize } from "../lib/getDirSize.js";
 import type { CommandFunction } from "../types.js";
 
-export const storeCommandHandler: CommandFunction = async (args, flags) => {
+export const storeCommandHandler: CommandFunction = async (args, _flags) => {
 	const subcommand = args[0];
 
 	if (!subcommand) {

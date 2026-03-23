@@ -37,6 +37,7 @@ type RegistryVersionObject = {
 	name: string;
 	version: string;
 	dist: RegistryDistObject;
+	dependencies?: Record<string, string>;
 };
 
 type RegistryDistObject = {
@@ -47,20 +48,4 @@ type RegistryDistObject = {
 	unpackedSize: string;
 };
 
-export type VersionRange = TagRange | SemVerRange;
-
-export type Operator = "^" | "~" | "exact";
-
-interface BaseRange {
-	operator?: Operator;
-}
-
-export interface TagRange extends BaseRange {
-	tag: "latest";
-}
-
-export interface SemVerRange extends BaseRange {
-	major: number;
-	minor: number;
-	patch: number;
-}
+export type PackageMetadataCache = Record<string, RegistryPackageMetadata>;
