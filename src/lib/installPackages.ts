@@ -6,6 +6,7 @@ import {
 } from "./linker.js";
 import { logger } from "./logger.js";
 import { verifyIntegrity } from "./packageIntegrity.js";
+import { createProgressBar } from "./progress.js";
 import { downloadTarball } from "./registry.js";
 import { type ResolutionGraph, resolveDeps } from "./resolver.js";
 import { isInStore, storePackage } from "./store.js";
@@ -18,6 +19,14 @@ export const installPackages = async (
 	logger.debug("Created dependency graph.");
 
 	// store deps
+	const totalPackages = Object.keys(depGraph).length;
+	if (totalPackages === 0) {
+		logger.info("No packages to install!");
+		return depGraph;
+	}
+
+	const progressBar = createProgressBar(totalPackages, "Downloading");
+
 	for (const resolvedPackage of Object.values(depGraph)) {
 		const {
 			name: pkgName,
@@ -53,6 +62,7 @@ export const installPackages = async (
 		if (resolvedPackage.isTopLevelDep) {
 			createTopLevelSymLink(pkgName, packageStoreKey, version);
 		}
+		progressBar.tick();
 	}
 
 	linkSubDependencies(depGraph);

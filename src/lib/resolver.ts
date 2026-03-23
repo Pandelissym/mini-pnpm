@@ -1,6 +1,7 @@
 import { satisfies } from "semver";
 import type { PackageMetadataCache } from "../types.js";
 import { logger } from "./logger.js";
+import { createProgressIndicator } from "./progress.js";
 import { fetchPackageMetadata, resolvePackageVersion } from "./registry.js";
 
 export type ResolutionGraph = Record<string, ResolvedPackage>;
@@ -23,6 +24,7 @@ export const resolveDeps = async (
 ): Promise<ResolutionGraph> => {
 	const graph: ResolutionGraph = {};
 	const packageMetadataCache: PackageMetadataCache = {};
+	const progressIndicator = createProgressIndicator("Resolved");
 
 	const queue: Array<{ name: string; range: string; isTopLevelDep?: boolean }> =
 		Object.entries(deps).map(([name, range]) => ({
@@ -96,13 +98,14 @@ export const resolveDeps = async (
 				queueEntries.add(`${depName}@${depRange}`);
 			}
 		}
+		progressIndicator.tick();
 
 		logger.debug("");
 	}
+	progressIndicator.end();
 
 	// TODO: engines check?
 
-	console.log("setting deps versions in graph");
 	// go over graph and set the correct dependency versions in each resolved object
 	for (const resolvedPackage of Object.values(graph)) {
 		const deps = resolvedPackage.rawDependencies;
