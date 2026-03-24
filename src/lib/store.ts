@@ -48,10 +48,7 @@ export const extractTarball = (data: Buffer, destDir: string) => {
 	}
 };
 
-export const storePackage = (
-	pkgStoreKey: string,
-	data: Buffer,
-): void => {
+export const storePackage = (pkgStoreKey: string, data: Buffer): void => {
 	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
 
 	if (fs.existsSync(destDir)) {

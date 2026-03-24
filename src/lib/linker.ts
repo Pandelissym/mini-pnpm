@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH } from "../constants.js";
-import { getPackageStoreKey } from "./getPackageStoreKey.js";
+import { logger } from "./logger.js";
+import {
+	getPackageStoreKey,
+	pkgKeyToPnpmVirtualStoreKey,
+} from "./packageKey.js";
 import type { ResolutionGraph } from "./resolver.js";
 
 export const addToVirtualStore = (name: string, packageStoreKey: string) => {
@@ -21,6 +25,25 @@ export const addToVirtualStore = (name: string, packageStoreKey: string) => {
 	const sourceDir = path.join(GLOBAL_STORE_PATH, `${packageStoreKey}`);
 
 	hardLinkDir(sourceDir, virtualStoreDir);
+};
+
+export const removeFromVirtualStore = (pkgKey: string): void => {
+	const pkgVirtualStoreDir = path.join(
+		process.cwd(),
+		"node_modules",
+		".pnpm",
+		pkgKeyToPnpmVirtualStoreKey(pkgKey),
+	);
+
+	if (!fs.existsSync(pkgVirtualStoreDir)) {
+		logger.debug(
+			`Hard link for ${pkgKey} at ${pkgVirtualStoreDir} does not exist. Skipping.`,
+		);
+		return;
+	}
+
+	fs.rmSync(pkgVirtualStoreDir, { recursive: true });
+	logger.debug(`Removed ${pkgKey} from virtual store at ${pkgVirtualStoreDir}`);
 };
 
 const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
@@ -75,10 +98,33 @@ export const createTopLevelSymLink = (
 	fs.symlinkSync(target, topLevelDir, "dir");
 };
 
-export const linkSubDependencies = (graph: ResolutionGraph): void => {
-	for (const pkg of Object.values(graph)) {
-		const pkgStoreKey = getPackageStoreKey(pkg.name, pkg.version);
+export const removeTopLevelSymLink = (pkgName: string): void => {
+	const topLevelSymLinkPath = path.join(process.cwd(), "node_modules", pkgName);
 
+	if (!symLinkExists(topLevelSymLinkPath)) {
+		logger.debug(
+			`Symlink for ${pkgName} at ${topLevelSymLinkPath} does not exist. Skipping.`,
+		);
+		return;
+	}
+
+	fs.unlinkSync(topLevelSymLinkPath);
+	logger.debug(
+		`Removed top level symlink for ${pkgName} at ${topLevelSymLinkPath}`,
+	);
+};
+
+const symLinkExists = (linkPath: string): boolean => {
+	try {
+		fs.lstatSync(linkPath);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+export const linkSubDependencies = (graph: ResolutionGraph): void => {
+	for (const [pkgKey, pkg] of Object.entries(graph)) {
 		for (const [depName, depVersion] of Object.entries(pkg.dependencies)) {
 			const depPkgStoreKey = getPackageStoreKey(depName, depVersion);
 
@@ -86,18 +132,12 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 				process.cwd(),
 				"node_modules",
 				".pnpm",
-				pkgStoreKey,
+				pkgKey,
 				`node_modules`,
 				depName,
 			);
 
-			let exists = false;
-			try {
-				fs.lstatSync(source);
-				exists = true;
-			} catch {}
-
-			if (exists) {
+			if (symLinkExists(source)) {
 				continue;
 			}
 

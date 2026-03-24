@@ -1,4 +1,3 @@
-import { getPackageStoreKey } from "./getPackageStoreKey.js";
 import {
 	addToVirtualStore,
 	createTopLevelSymLink,
@@ -27,7 +26,7 @@ export const installPackages = async (
 
 	const progressBar = createProgressBar(totalPackages, "Downloading");
 
-	for (const resolvedPackage of Object.values(depGraph)) {
+	for (const [pkgKey, resolvedPackage] of Object.entries(depGraph)) {
 		const {
 			name: pkgName,
 			version,
@@ -36,9 +35,8 @@ export const installPackages = async (
 			integrity,
 		} = resolvedPackage;
 
-		const packageStoreKey = getPackageStoreKey(pkgName, version);
-		logger.debug(`Trying to store package ${packageStoreKey}`);
-		if (isInStore(packageStoreKey)) {
+		logger.debug(`Trying to store package ${pkgKey}`);
+		if (isInStore(pkgKey)) {
 			logger.debug("Package already exists in global store!");
 		} else {
 			const data = await downloadTarball(tarballUrl);
@@ -53,14 +51,14 @@ export const installPackages = async (
 
 			logger.debug(`Package integrity check: PASS`);
 
-			storePackage(packageStoreKey, data);
+			storePackage(pkgKey, data);
 		}
 
 		// add package to virtual store
-		addToVirtualStore(pkgName, packageStoreKey);
+		addToVirtualStore(pkgName, pkgKey);
 
 		if (resolvedPackage.isTopLevelDep) {
-			createTopLevelSymLink(pkgName, packageStoreKey, version);
+			createTopLevelSymLink(pkgName, pkgKey, version);
 		}
 		progressBar.tick();
 	}

@@ -1,6 +1,9 @@
 import { isValidMiniPnpmDirectory } from "../lib/getProjectRoot.js";
 import { installPackages } from "../lib/installPackages.js";
-import { readPackageJSON } from "../lib/packageJson.js";
+import {
+	collectDependencyEntries,
+	readPackageJSON,
+} from "../lib/packageJson.js";
 import type { CommandFunction } from "../types.js";
 
 export const installCommand: CommandFunction = async () => {
@@ -11,10 +14,6 @@ export const installCommand: CommandFunction = async () => {
 	}
 
 	const packageJson = readPackageJSON();
-	const deps = {
-		...packageJson.dependencies,
-		...packageJson.devDependencies,
-	};
-
+	const deps = collectDependencyEntries(packageJson);
 	await installPackages(deps);
 };

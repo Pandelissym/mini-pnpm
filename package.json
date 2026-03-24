@@ -9,7 +9,9 @@
 	"scripts": {
 		"dev": "tsx src/cli.ts",
 		"build": "tsc",
-		"test": "vitest"
+		"test": "vitest",
+		"format": "biome check --fix",
+		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
 		"minimist": "1.2.8",
@@ -19,8 +21,8 @@
 		"@biomejs/biome": "2.4.8",
 		"@types/minimist": "^1.2.5",
 		"@types/node": "^25.5.0",
-		"tsx": "^4.21.0",
 		"@types/semver": "^7.7.1",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.0"
 	}

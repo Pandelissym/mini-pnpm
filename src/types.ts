@@ -1,9 +1,11 @@
 export type PackageJSON = {
 	version: string;
 	name: string;
-	devDependencies?: Record<string, string>;
-	dependencies?: Record<string, string>;
+	devDependencies?: DepMap;
+	dependencies?: DepMap;
 };
+
+export type DepMap = Record<string, string>;
 
 export type CliFlags = {
 	"save-dev": boolean;
