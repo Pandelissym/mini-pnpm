@@ -53,7 +53,7 @@ export const installPackages = async (
 
 			logger.debug(`Package integrity check: PASS`);
 
-			storePackage(packageStoreKey, data, integrity);
+			storePackage(packageStoreKey, data);
 		}
 
 		// add package to virtual store

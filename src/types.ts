@@ -7,7 +7,7 @@ export type PackageJSON = {
 
 export type CliFlags = {
 	"save-dev": boolean;
-	version: "boolean";
+	version: boolean;
 	D: boolean;
 	v: boolean;
 };

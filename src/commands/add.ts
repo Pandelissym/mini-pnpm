@@ -86,7 +86,7 @@ const addPackageJsonEntries = (
 		pkgs.map((pkg) => [pkg.name, pkg.requestedRange]),
 	);
 	packageJson[key] = {
-		...newEntries,
 		...packageJson[key],
+		...newEntries,
 	};
 };

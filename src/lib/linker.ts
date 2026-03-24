@@ -98,7 +98,7 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 			} catch {}
 
 			if (exists) {
-				return;
+				continue;
 			}
 
 			fs.mkdirSync(path.dirname(source), { recursive: true });

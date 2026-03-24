@@ -36,9 +36,13 @@ export const extractTarball = (data: Buffer, destDir: string) => {
 			// file
 			fs.mkdirSync(path.dirname(filePath), { recursive: true });
 			fs.writeFileSync(filePath, gunzipped.subarray(offset, offset + size), {});
-		} else {
+		} else if (type === "5") {
 			// dir
 			fs.mkdirSync(filePath, { recursive: true });
+		} else {
+			throw new Error(
+				`Parsing tarball error: Encountered object of type ${type} which the parser does not support currently.`,
+			);
 		}
 		offset += Math.ceil(size / 512) * 512;
 	}
@@ -47,7 +51,6 @@ export const extractTarball = (data: Buffer, destDir: string) => {
 export const storePackage = (
 	pkgStoreKey: string,
 	data: Buffer,
-	integrity: string,
 ): void => {
 	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
 
@@ -59,7 +62,6 @@ export const storePackage = (
 	fs.mkdirSync(tempDir, { recursive: true });
 
 	extractTarball(data, tempDir);
-	fs.writeFileSync(path.join(tempDir, ".integrity"), integrity);
 
 	fs.renameSync(tempDir, destDir);
 };

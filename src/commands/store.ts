@@ -15,6 +15,8 @@ export const storeCommandHandler: CommandFunction = async (args, _flags) => {
 	if (subcommand === "status") {
 		return storeStatusCommand();
 	}
+
+	throw new Error("Command does not exist");
 };
 
 const storeStatusCommand = () => {

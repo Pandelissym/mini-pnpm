@@ -133,7 +133,7 @@ mini-pnpm store status
 ```bash
 npm run dev      # Run CLI via tsx
 npm run build    # Compile TypeScript to dist/
-npm test         # Placeholder (currently exits with error)
+npm test         # Run tests
 ```
 
 ## Project structure
