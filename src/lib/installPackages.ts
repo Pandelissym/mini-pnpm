@@ -5,6 +5,7 @@ import {
 } from "./linker.js";
 import { logger } from "./logger.js";
 import { verifyIntegrity } from "./packageIntegrity.js";
+import { getPackageStoreKey } from "./packageKey.js";
 import { createProgressBar } from "./progress.js";
 import { downloadTarball } from "./registry.js";
 import { type ResolutionGraph, resolveDeps } from "./resolver.js";
@@ -38,9 +39,9 @@ export const installPackages = async (
 			size,
 			integrity,
 		} = resolvedPackage;
-
+		const pkgStoreKey = getPackageStoreKey(pkgName, version);
 		logger.debug(`Trying to store package ${pkgKey}`);
-		if (isInStore(pkgKey)) {
+		if (isInStore(pkgStoreKey)) {
 			logger.debug("Package already exists in global store!");
 		} else {
 			const data = await downloadTarball(tarballUrl);
@@ -55,14 +56,14 @@ export const installPackages = async (
 
 			logger.debug(`Package integrity check: PASS`);
 
-			storePackage(pkgKey, data);
+			storePackage(pkgStoreKey, data);
 		}
 
 		// add package to virtual store
-		addToVirtualStore(pkgName, pkgKey);
+		addToVirtualStore(pkgName, pkgStoreKey);
 
 		if (resolvedPackage.isTopLevelDep) {
-			createTopLevelSymLink(pkgName, pkgKey, version);
+			createTopLevelSymLink(pkgName, pkgStoreKey, version);
 		}
 		progressBar.tick();
 	}

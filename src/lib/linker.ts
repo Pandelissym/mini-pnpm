@@ -5,6 +5,7 @@ import { logger } from "./logger.js";
 import {
 	getPackageStoreKey,
 	pkgKeyToPnpmVirtualStoreKey,
+	splitStringByLastAt,
 } from "./packageKey.js";
 import type { ResolutionGraph } from "./resolver.js";
 
@@ -98,8 +99,9 @@ export const createTopLevelSymLink = (
 	fs.symlinkSync(target, topLevelDir, "dir");
 };
 
-export const removeTopLevelSymLink = (pkgName: string): void => {
-	const topLevelSymLinkPath = path.join(process.cwd(), "node_modules", pkgName);
+export const removeTopLevelSymLink = (pkgKey: string): void => {
+	const [name, _] = splitStringByLastAt(pkgKey);
+	const topLevelSymLinkPath = path.join(process.cwd(), "node_modules", name);
 
 	if (!symLinkExists(topLevelSymLinkPath)) {
 		logger.debug(
@@ -122,6 +124,7 @@ const symLinkExists = (linkPath: string): boolean => {
 
 export const linkSubDependencies = (graph: ResolutionGraph): void => {
 	for (const [pkgKey, pkg] of Object.entries(graph)) {
+		const pkgStoreKey = pkgKeyToPnpmVirtualStoreKey(pkgKey);
 		for (const [depName, depVersion] of Object.entries(pkg.dependencies)) {
 			const depPkgStoreKey = getPackageStoreKey(depName, depVersion);
 
@@ -129,7 +132,7 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 				process.cwd(),
 				"node_modules",
 				".pnpm",
-				pkgKey,
+				pkgStoreKey,
 				`node_modules`,
 				depName,
 			);
