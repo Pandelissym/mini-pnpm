@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { GLOBAL_STORE_PATH } from "../constants.js";
+import { logger } from "./logger.js";
 
 /**
  * The name, linkname, magic, uname, and gname are null-terminated character strings.
@@ -52,14 +53,17 @@ export const storePackage = (pkgStoreKey: string, data: Buffer): void => {
 	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
 
 	if (fs.existsSync(destDir)) {
+		logger.debug(`${destDir} already exists. Skipping`);
 		return;
 	}
 
 	const tempDir = `${GLOBAL_STORE_PATH}/.temp-${pkgStoreKey}`;
+	logger.debug(`Creating temp dir at ${tempDir}`);
 	fs.mkdirSync(tempDir, { recursive: true });
 
 	extractTarball(data, tempDir);
 
+	logger.debug(`Moving ${tempDir} to ${destDir}`);
 	fs.renameSync(tempDir, destDir);
 };
 

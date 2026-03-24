@@ -103,15 +103,12 @@ export const removeTopLevelSymLink = (pkgName: string): void => {
 
 	if (!symLinkExists(topLevelSymLinkPath)) {
 		logger.debug(
-			`Symlink for ${pkgName} at ${topLevelSymLinkPath} does not exist. Skipping.`,
+			`Symlink for ${name} at ${topLevelSymLinkPath} does not exist. Skipping.`,
 		);
 		return;
 	}
-
+	logger.debug(`Removing ${topLevelSymLinkPath} for key ${pkgKey}`);
 	fs.unlinkSync(topLevelSymLinkPath);
-	logger.debug(
-		`Removed top level symlink for ${pkgName} at ${topLevelSymLinkPath}`,
-	);
 };
 
 const symLinkExists = (linkPath: string): boolean => {

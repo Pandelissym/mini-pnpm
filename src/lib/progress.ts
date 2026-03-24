@@ -7,10 +7,14 @@ const BAR_SIZE = 30;
 export const createProgressBar = (
 	total: number,
 	label: string,
+	silent: boolean,
 ): ProgressBar => {
 	let current = 0;
 
 	const draw = () => {
+		if (silent) {
+			return;
+		}
 		const progress = Math.floor((current / total) * BAR_SIZE);
 		const bar = "￭".repeat(progress) + "･".repeat(BAR_SIZE - progress);
 
@@ -25,10 +29,13 @@ export const createProgressBar = (
 	};
 };
 
-export const createProgressIndicator = (label: string) => {
+export const createProgressIndicator = (label: string, silent: boolean) => {
 	let current = 0;
 
 	const draw = () => {
+		if (silent) {
+			return;
+		}
 		process.stdout.write(`\r\x1b[K  ${label}  ${current}`);
 	};
 

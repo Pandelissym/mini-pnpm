@@ -10,6 +10,7 @@ export type DepMap = Record<string, string>;
 export type CliFlags = {
 	"save-dev": boolean;
 	version: boolean;
+	"log-level": string;
 	D: boolean;
 	v: boolean;
 };

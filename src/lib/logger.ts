@@ -4,7 +4,7 @@ const YELLOW = "\x1b[33m";
 const RED = "\x1b[31m";
 const GRAY = "\x1b[90m";
 
-const LOG_LEVELS = {
+export const LOG_LEVELS = {
 	debug: 0,
 	info: 1,
 	warn: 2,
@@ -12,6 +12,10 @@ const LOG_LEVELS = {
 } as const;
 
 type LogLevel = keyof typeof LOG_LEVELS;
+
+export const isValidLogLevel = (level: string): level is LogLevel => {
+	return Object.keys(LOG_LEVELS).includes(level);
+};
 
 function createLogger(level: LogLevel = "info") {
 	let configuredLevel = level;
@@ -21,6 +25,7 @@ function createLogger(level: LogLevel = "info") {
 	};
 
 	return {
+		isDebugEnabled: () => configuredLevel === "debug",
 		setLogLevel: (level: LogLevel) => {
 			configuredLevel = level;
 		},

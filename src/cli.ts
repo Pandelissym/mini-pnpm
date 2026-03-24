@@ -1,6 +1,7 @@
 import minimist from "minimist";
 import { commands } from "./commands/commands.js";
 import { printHelp } from "./lib/help.js";
+import { isValidLogLevel, logger } from "./lib/logger.js";
 import { printVersion } from "./lib/version.js";
 import type { CliArgs } from "./types.js";
 
@@ -11,6 +12,10 @@ const cli = async () => {
 			v: "version",
 		},
 		boolean: ["version", "save-dev"],
+		string: ["log-level"],
+		default: {
+			"log-level": "info",
+		},
 	};
 
 	const { _: args, ...flags } = minimist(
@@ -21,6 +26,16 @@ const cli = async () => {
 	if (flags.version) {
 		printVersion();
 		process.exit(0);
+	}
+
+	const logLevel = flags["log-level"];
+	if (logLevel) {
+		if (!isValidLogLevel(logLevel)) {
+			throw new Error(
+				`Argument passed for log-level: ${logLevel} is not a valid option`,
+			);
+		}
+		logger.setLogLevel(logLevel);
 	}
 
 	const command = args[0];

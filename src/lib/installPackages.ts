@@ -24,7 +24,11 @@ export const installPackages = async (
 		return depGraph;
 	}
 
-	const progressBar = createProgressBar(totalPackages, "Downloading");
+	const progressBar = createProgressBar(
+		totalPackages,
+		"Downloading",
+		logger.isDebugEnabled(),
+	);
 
 	for (const [pkgKey, resolvedPackage] of Object.entries(depGraph)) {
 		const {

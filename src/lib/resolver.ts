@@ -24,7 +24,10 @@ export const resolveDeps = async (
 ): Promise<ResolutionGraph> => {
 	const graph: ResolutionGraph = {};
 	const packageMetadataCache: PackageMetadataCache = {};
-	const progressIndicator = createProgressIndicator("Resolved");
+	const progressIndicator = createProgressIndicator(
+		"Resolved",
+		logger.isDebugEnabled(),
+	);
 
 	const queue: Array<{ name: string; range: string; isTopLevelDep?: boolean }> =
 		Object.entries(deps).map(([name, range]) => ({
