@@ -1,9 +1,11 @@
 import minimist from "minimist";
+import path from "node:path";
 import { commands } from "./commands/commands.js";
 import { printHelp } from "./lib/help.js";
 import { isValidLogLevel, logger } from "./lib/logger.js";
 import { printVersion } from "./lib/version.js";
 import type { CliArgs } from "./types.js";
+import "./constants.js";
 
 const cli = async () => {
 	const options: minimist.Opts = {
@@ -24,7 +26,7 @@ const cli = async () => {
 	) as CliArgs;
 
 	if (flags.version) {
-		printVersion();
+		printVersion(path.join(process.cwd(), "package.json"));
 		process.exit(0);
 	}
 

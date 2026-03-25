@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { GLOBAL_STORE_PATH } from "../constants.js";
+import { GLOBAL_STORE_PATH, PROJECT_ROOT } from "../constants.js";
 import { logger } from "./logger.js";
 import {
 	getPackageStoreKey,
@@ -9,9 +9,12 @@ import {
 } from "./packageKey.js";
 import type { ResolutionGraph } from "./resolver.js";
 
-export const addToVirtualStore = (name: string, packageStoreKey: string) => {
+export const addToVirtualStore = (
+	name: string,
+	packageStoreKey: string,
+): void => {
 	const virtualStoreDir = path.join(
-		process.cwd(),
+		PROJECT_ROOT,
 		"node_modules",
 		".pnpm",
 		`${packageStoreKey}`,
@@ -30,7 +33,7 @@ export const addToVirtualStore = (name: string, packageStoreKey: string) => {
 
 export const removeFromVirtualStore = (pkgKey: string): void => {
 	const pkgVirtualStoreDir = path.join(
-		process.cwd(),
+		PROJECT_ROOT,
 		"node_modules",
 		".pnpm",
 		pkgKeyToPnpmVirtualStoreKey(pkgKey),
@@ -71,16 +74,10 @@ const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
 export const createTopLevelSymLink = (
 	name: string,
 	packageStoreKey: string,
-) => {
-	const topLevelDir = path.join(process.cwd(), "node_modules", name);
-	const target = path.join(
-		process.cwd(),
-		"node_modules",
-		".pnpm",
-		packageStoreKey,
-		`node_modules`,
-		name,
-	);
+): void => {
+	const topLevelDir = path.join(PROJECT_ROOT, "node_modules", name);
+	const target = path.join(".pnpm", packageStoreKey, `node_modules`, name);
+
 	if (symLinkExists(topLevelDir)) {
 		if (fs.readlinkSync(topLevelDir) === target) {
 			return;
@@ -95,7 +92,7 @@ export const createTopLevelSymLink = (
 
 export const removeTopLevelSymLink = (pkgKey: string): void => {
 	const [name, _] = splitStringByLastAt(pkgKey);
-	const topLevelSymLinkPath = path.join(process.cwd(), "node_modules", name);
+	const topLevelSymLinkPath = path.join(PROJECT_ROOT, "node_modules", name);
 
 	if (!symLinkExists(topLevelSymLinkPath)) {
 		logger.debug(
@@ -123,7 +120,7 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 			const depPkgStoreKey = getPackageStoreKey(depName, depVersion);
 
 			const source = path.join(
-				process.cwd(),
+				PROJECT_ROOT,
 				"node_modules",
 				".pnpm",
 				pkgStoreKey,
@@ -131,9 +128,8 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 				depName,
 			);
 			const target = path.join(
-				process.cwd(),
-				"node_modules",
-				".pnpm",
+				"..",
+				"..",
 				depPkgStoreKey,
 				`node_modules`,
 				depName,

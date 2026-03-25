@@ -10,5 +10,3 @@ export const commands: Record<string, CommandFunction> = {
 	remove: removeCommand,
 	store: storeCommandHandler,
 };
-
-export const availableCommands = Object.keys(commands);

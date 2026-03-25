@@ -40,10 +40,7 @@ export const resolvePackageVersion = (
 	packageMetadata: RegistryPackageMetadata,
 	range: string,
 ): string | undefined => {
-	const distTagVersion =
-		packageMetadata["dist-tags"][
-			range as keyof RegistryPackageMetadata["dist-tags"]
-		];
+	const distTagVersion = packageMetadata["dist-tags"][range];
 	if (distTagVersion) {
 		return distTagVersion;
 	}

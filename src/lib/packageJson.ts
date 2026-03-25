@@ -24,7 +24,8 @@ export const readPackageJSON = (): PackageJSON => {
  */
 export const writePackageJSON = (packageJson: PackageJSON): void => {
 	const data = JSON.stringify(packageJson, null, 2);
-	writeFileSync(PACKAGE_JSON_PATH, data);
+	const dataWithNewLine = data.endsWith("\n") ? data : `${data}\n`;
+	writeFileSync(PACKAGE_JSON_PATH, dataWithNewLine);
 };
 
 export const removeEntriesFromPackageJSON = (

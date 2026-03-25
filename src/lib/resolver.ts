@@ -79,15 +79,15 @@ export const resolveDeps = async (
 			isTopLevelDep,
 			requestedRange,
 			tarballUrl: packageVersionObject.dist.tarball,
-			size: parseInt(packageVersionObject.dist.unpackedSize, 10),
+			size: packageVersionObject.dist.unpackedSize,
 			integrity: packageVersionObject.dist.integrity,
 			rawDependencies: packageVersionObject.dependencies ?? {},
 			dependencies: {}, // we don't know exact versions yet so we when we have resolved those
 		};
 
 		// add all subdeps to queue
-		const deps = packageVersionObject.dependencies || {};
-		for (const [depName, depRange] of Object.entries(deps)) {
+		const subDeps = packageVersionObject.dependencies || {};
+		for (const [depName, depRange] of Object.entries(subDeps)) {
 			// package already resolved so we can skip
 			if (findResolvedVersionFromGraph(graph, depName, depRange)) {
 				continue;
@@ -111,13 +111,13 @@ export const resolveDeps = async (
 
 	// go over graph and set the correct dependency versions in each resolved object
 	for (const resolvedPackage of Object.values(graph)) {
-		const deps = resolvedPackage.rawDependencies;
+		const rawSubDeps = resolvedPackage.rawDependencies;
 
-		if (!Object.keys(deps).length) {
+		if (!Object.keys(rawSubDeps).length) {
 			continue;
 		}
 
-		for (const [depName, depVersionRange] of Object.entries(deps)) {
+		for (const [depName, depVersionRange] of Object.entries(rawSubDeps)) {
 			const resolvedVersion = findResolvedVersionFromGraph(
 				graph,
 				depName,

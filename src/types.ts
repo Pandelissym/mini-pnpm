@@ -27,12 +27,8 @@ export type CommandFunction = (
 export type RegistryPackageMetadata = {
 	name: string;
 	versions: Record<string, RegistryVersionObject>;
-	"dist-tags": {
-		next: string;
-		alpha: string;
-		beta: string;
+	"dist-tags": Record<string, string> & {
 		latest: string;
-		canary: string;
 	};
 };
 
@@ -48,7 +44,16 @@ type RegistryDistObject = {
 	tarball: string;
 	fileCount: number;
 	integrity: string;
-	unpackedSize: string;
+	unpackedSize: number;
 };
 
 export type PackageMetadataCache = Record<string, RegistryPackageMetadata>;
+
+// export type Lockfile = {
+// 	lockfileVersion: number;
+// 	packages: LockfileEntry;
+// };
+
+// export type LockfileEntry = {
+// 	lockfileVersion
+// }

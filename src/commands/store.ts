@@ -19,7 +19,7 @@ export const storeCommandHandler: CommandFunction = async (args, _flags) => {
 	throw new Error("Command does not exist");
 };
 
-const storeStatusCommand = () => {
+const storeStatusCommand = (): void => {
 	if (!fs.existsSync(GLOBAL_STORE_PATH)) {
 		logger.info("Store is empty");
 		return;

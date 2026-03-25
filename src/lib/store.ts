@@ -9,7 +9,7 @@ import { logger } from "./logger.js";
  * All other fields are zero-filled octal numbers in ASCII
  */
 
-export const extractTarball = (data: Buffer, destDir: string) => {
+export const extractTarball = (data: Buffer, destDir: string): void => {
 	const gunzipped = zlib.gunzipSync(data);
 
 	let offset = 0;

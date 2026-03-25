@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { PROJECT_ROOT } from "../constants.js";
 import { pnpmVirtualStoreKeyToPackageKey } from "./packageKey.js";
 
 export const getInstalledPackages = (): string[] => {
-	const virtualStoreDir = path.join(process.cwd(), "node_modules", ".pnpm");
+	const virtualStoreDir = path.join(PROJECT_ROOT, "node_modules", ".pnpm");
 
 	if (!fs.existsSync(virtualStoreDir)) {
 		return [];
