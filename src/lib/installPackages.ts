@@ -63,7 +63,7 @@ export const installPackages = async (
 		addToVirtualStore(pkgName, pkgStoreKey);
 
 		if (resolvedPackage.isTopLevelDep) {
-			createTopLevelSymLink(pkgName, pkgStoreKey, version);
+			createTopLevelSymLink(pkgName, pkgStoreKey);
 		}
 		progressBar.tick();
 	}

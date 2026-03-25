@@ -71,22 +71,8 @@ const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
 export const createTopLevelSymLink = (
 	name: string,
 	packageStoreKey: string,
-	_version: string,
 ) => {
 	const topLevelDir = path.join(process.cwd(), "node_modules", name);
-
-	let exists = false;
-	try {
-		fs.lstatSync(topLevelDir);
-		exists = true;
-	} catch {}
-
-	if (exists) {
-		return;
-	}
-
-	fs.mkdirSync(path.dirname(topLevelDir), { recursive: true });
-
 	const target = path.join(
 		process.cwd(),
 		"node_modules",
@@ -95,6 +81,14 @@ export const createTopLevelSymLink = (
 		`node_modules`,
 		name,
 	);
+	if (symLinkExists(topLevelDir)) {
+		if (fs.readlinkSync(topLevelDir) === target) {
+			return;
+		}
+		fs.unlinkSync(topLevelDir);
+	} else {
+		fs.mkdirSync(path.dirname(topLevelDir), { recursive: true });
+	}
 
 	fs.symlinkSync(target, topLevelDir, "dir");
 };
@@ -136,13 +130,6 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 				`node_modules`,
 				depName,
 			);
-
-			if (symLinkExists(source)) {
-				continue;
-			}
-
-			fs.mkdirSync(path.dirname(source), { recursive: true });
-
 			const target = path.join(
 				process.cwd(),
 				"node_modules",
@@ -151,6 +138,15 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 				`node_modules`,
 				depName,
 			);
+			if (symLinkExists(source)) {
+				if (fs.readlinkSync(source) === target) {
+					continue;
+				}
+				fs.unlinkSync(source);
+			} else {
+				fs.mkdirSync(path.dirname(source), { recursive: true });
+			}
+
 			fs.symlinkSync(target, source, "dir");
 		}
 	}
