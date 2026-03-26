@@ -4,12 +4,17 @@ import zlib from "node:zlib";
 import { GLOBAL_STORE_PATH } from "../constants.js";
 import { logger } from "./logger.js";
 
+export type GlobalStore = {
+	isInStore: (key: string) => boolean;
+	addToStore: (key: string, data: Buffer) => void;
+};
+
 /**
  * The name, linkname, magic, uname, and gname are null-terminated character strings.
  * All other fields are zero-filled octal numbers in ASCII
  */
 
-export const extractTarball = (data: Buffer, destDir: string): void => {
+const extractTarball = (data: Buffer, destDir: string): void => {
 	const gunzipped = zlib.gunzipSync(data);
 
 	let offset = 0;
@@ -49,7 +54,7 @@ export const extractTarball = (data: Buffer, destDir: string): void => {
 	}
 };
 
-export const storePackage = (pkgStoreKey: string, data: Buffer): void => {
+export const addToStore = (pkgStoreKey: string, data: Buffer): void => {
 	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
 
 	if (fs.existsSync(destDir)) {
@@ -71,4 +76,9 @@ export const isInStore = (name: string): boolean => {
 	const packageDir = `${GLOBAL_STORE_PATH}/${name}`;
 
 	return fs.existsSync(packageDir);
+};
+
+export const globalStore: GlobalStore = {
+	isInStore,
+	addToStore,
 };

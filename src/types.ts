@@ -1,3 +1,5 @@
+import type { Lockfile } from "./lib/lockfile.js";
+
 export type ResolvedTopLevelPackages = Record<
 	string,
 	{ version: string; type: DependencyType }
@@ -29,6 +31,11 @@ export type ResolutionGraphDiff = {
 	removed: { pkg: ResolvedPackage; removalType: PackageRemovalType }[];
 	added: ResolvedPackage[];
 };
+
+export type PackageResolver = (
+	packages: UnResolvedTopLevelPackages,
+	lockfile?: Lockfile,
+) => Promise<ResolutionGraphDiff>;
 
 export type StoredLockfile = {
 	lockfileVersion: number;

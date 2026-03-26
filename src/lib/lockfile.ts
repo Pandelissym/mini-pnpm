@@ -67,11 +67,11 @@ export class Lockfile {
 			) as StoredLockfile;
 
 			const parsedDependencies = Object.entries(lockfile.dependencies).map(
-				([name, version]) => [name, { version, type: "dependency" }],
+				([name, version]) => [name, { version, type: "dependencies" }],
 			);
 			const parsedDevDependencies = Object.entries(
 				lockfile.devDependencies,
-			).map(([name, version]) => [name, { version, type: "devDependency" }]);
+			).map(([name, version]) => [name, { version, type: "devDependencies" }]);
 			const topLevelPackages: ResolvedTopLevelPackages = Object.fromEntries([
 				...parsedDependencies,
 				...parsedDevDependencies,

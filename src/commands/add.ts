@@ -1,7 +1,7 @@
-import { installPackages } from "../lib/installPackages.js";
 import { Lockfile } from "../lib/lockfile.js";
 import { PackageJSON } from "../lib/packageJSON.js";
 import { parseCLIPackageNameWithRanges } from "../lib/parseCLIPackageNameWithRange.js";
+import { resolveAndInstallWorkflow } from "../lib/resolveAndInstallWorkflow.js";
 import type { CliFlags, CommandFunction, DependencyType } from "../types.js";
 
 type ParsedAddCommandArgs = {
@@ -36,7 +36,11 @@ const handleAdd = async (
 		...parsedPackagesToAdd,
 	};
 
-	const resolutionGraphDiff = await installPackages(combinedPackagesToAdd);
+	const lockfile = Lockfile.fromDisk();
+	const resolutionGraphDiff = await resolveAndInstallWorkflow(
+		combinedPackagesToAdd,
+		lockfile,
+	);
 
 	const updatedLockfile = Lockfile.fromGraph(resolutionGraphDiff.graph);
 	updatedLockfile.writeToDisk();

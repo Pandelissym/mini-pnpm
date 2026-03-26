@@ -1,17 +1,24 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { PACKAGE_JSON_PATH } from "../constants.js";
-import type {
-	DependencyType,
-	ResolvedPackage,
-	UnResolvedTopLevelPackages,
+import {
+	DEPENDENCY_TYPES,
+	type DependencyType,
+	type ResolvedPackage,
+	type UnResolvedTopLevelPackages,
 } from "../types.js";
 import type { Lockfile } from "./lockfile.js";
+import { logger } from "./logger.js";
 
 type PackageJSONProps = {
 	version: string;
 	name: string;
 	dependenciesMap: Record<DependencyType, Record<string, string> | undefined>;
 };
+
+type StoredPackageJSON = {
+	version: string;
+	name: string;
+} & Record<DependencyType, Record<string, string> | undefined>;
 
 export class PackageJSON {
 	private version: string;
@@ -28,6 +35,7 @@ export class PackageJSON {
 	}
 
 	writeToDisk() {
+		logger.debug(`${JSON.stringify(this.toObject())}`);
 		const data = JSON.stringify(this.toObject(), null, 2);
 		const dataWithNewLine = data.endsWith("\n") ? data : `${data}\n`;
 		writeFileSync(PACKAGE_JSON_PATH, dataWithNewLine);
@@ -59,7 +67,7 @@ export class PackageJSON {
 			if (!key || !this.dependenciesMap[key]) {
 				return;
 			}
-			delete this.dependenciesMap[key];
+			delete this.dependenciesMap[key][pkg.name];
 		});
 
 		Object.entries(unresolvedPackagesAdded).forEach(
@@ -89,7 +97,7 @@ export class PackageJSON {
 		}
 	};
 
-	toObject() {
+	toObject(): StoredPackageJSON {
 		return {
 			version: this.version,
 			name: this.name,
@@ -107,20 +115,17 @@ export class PackageJSON {
 		const file = readFileSync(PACKAGE_JSON_PATH, "utf8");
 
 		// add validation here
-		const packageJson = JSON.parse(file);
+		const packageJson = JSON.parse(file) as StoredPackageJSON;
 
-		return new PackageJSON(packageJson);
+		const dependenciesMap = {
+			dependencies: packageJson.dependencies,
+			devDependencies: packageJson.devDependencies,
+		};
+
+		return new PackageJSON({
+			name: packageJson.name,
+			version: packageJson.version,
+			dependenciesMap,
+		});
 	}
 }
-
-// /**
-//  * Writes a manifest to the PACKAGE_MANIFEST_PATH location.
-//  * @param manifest The manifest to write
-//  */
-
-// /**
-//  * Collects all dependencies entries from a package.json
-//  * If a dep appears in both deps and devDeps, deps overwrites it
-//  * @param packageJson
-//  * @returns
-//  */

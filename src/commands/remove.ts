@@ -1,6 +1,6 @@
-import { installPackages } from "../lib/installPackages.js";
 import { Lockfile } from "../lib/lockfile.js";
 import { PackageJSON } from "../lib/packageJSON.js";
+import { resolveAndInstallWorkflow } from "../lib/resolveAndInstallWorkflow.js";
 import type { CommandFunction } from "../types.js";
 
 type ParsedRemoveCommandArgs = {
@@ -19,7 +19,11 @@ const handleRemove = async (packagesToRemove: string[]): Promise<void> => {
 
 	const updatedPackages = packageJSON.collectDependencyEntries();
 
-	const resolutionGraphDiff = await installPackages(updatedPackages);
+	const lockfile = Lockfile.fromDisk();
+	const resolutionGraphDiff = await resolveAndInstallWorkflow(
+		updatedPackages,
+		lockfile,
+	);
 
 	const updatedLockfile = Lockfile.fromGraph(resolutionGraphDiff.graph);
 	updatedLockfile.writeToDisk();

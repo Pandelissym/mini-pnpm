@@ -52,12 +52,14 @@ const cli = async () => {
 		printHelp();
 		process.exit(1);
 	}
+
 	const commandFunction = commands[command];
 
 	if (!commandFunction) {
 		console.error("Command doesn't exist.");
 		process.exit(1);
 	}
+
 	await commandFunction(args.slice(1), flags);
 };
 
@@ -67,5 +69,7 @@ cli().catch((error) => {
 	} else {
 		console.error("Unexpected error");
 	}
+	logger.debug(JSON.stringify(error, null, 2));
+	console.info(error)
 	process.exit(1);
 });

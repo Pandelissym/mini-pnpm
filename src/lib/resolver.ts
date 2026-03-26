@@ -3,13 +3,13 @@ import type {
 	DependencyType,
 	LockfileTopLevelMismatches,
 	PackageRemovalType,
+	PackageResolver,
 	ResolutionGraph,
 	ResolutionGraphDiff,
 	ResolvedPackage,
 	UnResolvedTopLevelPackages,
 } from "../types.js";
 import { checkNodeModulesState } from "./linker.js";
-import type { Lockfile } from "./lockfile.js";
 import { logger } from "./logger.js";
 import { createProgressIndicator } from "./progress.js";
 import { fetchPackageMetadata, resolvePackageVersion } from "./registry.js";
@@ -52,9 +52,10 @@ export const updateResolutionGraph = async (
 			delete graph[pkgKeyToRemove];
 		} else if (graph[pkgKeyToRemove].dependencyType) {
 			packagesRemoved.push({
-				pkg: graph[pkgKeyToRemove],
+				pkg: JSON.parse(JSON.stringify(graph[pkgKeyToRemove])),
 				removalType: "only-top-level",
 			});
+			graph[pkgKeyToRemove].dependencyType = undefined
 		}
 	}
 
@@ -230,10 +231,7 @@ export const resolveFreshDeps = async (
 	return { graph, added: packagesAdded, removed: [] };
 };
 
-export const resolvePackages = async (
-	deps: UnResolvedTopLevelPackages,
-	lockfile?: Lockfile,
-): Promise<ResolutionGraphDiff> => {
+export const resolvePackages: PackageResolver = async (deps, lockfile) => {
 	let resolutionGraphDiff: ResolutionGraphDiff;
 	if (lockfile) {
 		await resolveDistTags(deps);

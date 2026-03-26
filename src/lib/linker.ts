@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH, PROJECT_ROOT } from "../constants.js";
-import type { ResolutionGraph } from "../types.js";
+import type {
+	ResolutionGraph,
+	ResolutionGraphDiff,
+	ResolvedPackage,
+} from "../types.js";
 import { logger } from "./logger.js";
 import {
 	getPackageStoreKey,
@@ -9,15 +13,15 @@ import {
 	splitStringByLastAt,
 } from "./packageKey.js";
 
-export const addToVirtualStore = (
-	name: string,
-	packageStoreKey: string,
-): void => {
+export const addToVirtualStore = (pkgKey: string): void => {
+	const [name, version] = splitStringByLastAt(pkgKey);
+	const pkgStoreKey = getPackageStoreKey(name, version);
+
 	const virtualStoreDir = path.join(
 		PROJECT_ROOT,
 		"node_modules",
 		".pnpm",
-		`${packageStoreKey}`,
+		`${pkgStoreKey}`,
 		`node_modules`,
 		name,
 	);
@@ -26,7 +30,7 @@ export const addToVirtualStore = (
 		return;
 	}
 
-	const sourceDir = path.join(GLOBAL_STORE_PATH, `${packageStoreKey}`);
+	const sourceDir = path.join(GLOBAL_STORE_PATH, `${pkgStoreKey}`);
 
 	hardLinkDir(sourceDir, virtualStoreDir);
 };
@@ -82,10 +86,10 @@ const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
 	}
 };
 
-export const createTopLevelSymLink = (
-	name: string,
-	packageStoreKey: string,
-): void => {
+export const createTopLevelSymLink = (pkgKey: string): void => {
+	const [name, version] = splitStringByLastAt(pkgKey);
+	const pkgStoreKey = getPackageStoreKey(name, version);
+
 	const topLevelDir = path.join(PROJECT_ROOT, "node_modules", name);
 	const amountOfLevelsUp: string[] = new Array(
 		(name.match("/") || []).length,
@@ -93,7 +97,7 @@ export const createTopLevelSymLink = (
 	const target = path.join(
 		...amountOfLevelsUp,
 		".pnpm",
-		packageStoreKey,
+		pkgStoreKey,
 		`node_modules`,
 		name,
 	);
@@ -139,9 +143,9 @@ const symLinkExists = (linkPath: string): boolean => {
 	}
 };
 
-export const linkSubDependencies = (graph: ResolutionGraph): void => {
-	for (const [pkgKey, pkg] of Object.entries(graph)) {
-		const pkgStoreKey = pkgKeyToPnpmVirtualStoreKey(pkgKey);
+export const linkSubDependencies = (packages: ResolvedPackage[]): void => {
+	for (const pkg of packages) {
+		const pkgStoreKey = getPackageStoreKey(pkg.name, pkg.version);
 		for (const [depName, depVersion] of Object.entries(pkg.dependencies)) {
 			const depPkgStoreKey = getPackageStoreKey(depName, depVersion);
 
@@ -190,4 +194,34 @@ export const checkNodeModulesState = (graph: ResolutionGraph) => {
 	}
 
 	return toAdd;
+};
+
+export const deletePackages = (
+	pkgsToRemove: ResolutionGraphDiff["removed"],
+) => {
+	for (const pkgToRemove of pkgsToRemove) {
+		const { pkg, removalType } = pkgToRemove;
+		const key = getPackageStoreKey(pkg.name, pkg.version);
+		if (pkg.dependencyType) {
+			removeTopLevelSymLink(key);
+		}
+
+		if (removalType === "full") {
+			removeFromVirtualStore(key);
+		}
+	}
+};
+
+export const linkPackages = (packages: ResolvedPackage[]): void => {
+	for (const pkg of packages) {
+		const { name, version, dependencyType } = pkg;
+		addToVirtualStore(`${name}@${version}`);
+
+		if (dependencyType) {
+			const key = `${name}@${version}`;
+			createTopLevelSymLink(key);
+		}
+	}
+
+	linkSubDependencies(packages);
 };
