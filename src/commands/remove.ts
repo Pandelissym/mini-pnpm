@@ -1,25 +1,37 @@
 import { installPackages } from "../lib/installPackages.js";
-import {
-	collectDependencyEntries,
-	readPackageJSON,
-	removeEntriesFromPackageJSON,
-	writePackageJSON,
-} from "../lib/packageJson.js";
+import { Lockfile } from "../lib/lockfile.js";
+import { PackageJSON } from "../lib/packageJSON.js";
 import type { CommandFunction } from "../types.js";
 
-export const removeCommand: CommandFunction = async (args, _) => {
-	const packagesToRemove = args.map((pkg) => pkg.trim());
+type ParsedRemoveCommandArgs = {
+	packagesToRemove: string[];
+};
 
-	if (!packagesToRemove.length) {
+export const removeCommand: CommandFunction = async (args, _) => {
+	const { packagesToRemove } = parseRemoveCommandArgs(args);
+
+	await handleRemove(packagesToRemove);
+};
+
+const handleRemove = async (packagesToRemove: string[]): Promise<void> => {
+	const packageJSON = PackageJSON.fromDisk();
+	packageJSON.removeEntriesFromPackageJSON(packagesToRemove);
+
+	const updatedPackages = packageJSON.collectDependencyEntries();
+
+	const resolutionGraphDiff = await installPackages(updatedPackages);
+
+	const updatedLockfile = Lockfile.fromGraph(resolutionGraphDiff.graph);
+	updatedLockfile.writeToDisk();
+
+	packageJSON.writeToDisk();
+};
+
+const parseRemoveCommandArgs = (args: string[]): ParsedRemoveCommandArgs => {
+	if (!args.length) {
 		throw new Error("A package to be removed must be specified");
 	}
+	const cleanedPackages = args.map((pkg) => pkg.trim());
 
-	const packageJSON = readPackageJSON();
-	removeEntriesFromPackageJSON(packageJSON, packagesToRemove);
-
-	const updatedDeps = collectDependencyEntries(packageJSON);
-
-	await installPackages(updatedDeps);
-
-	writePackageJSON(packageJSON);
+	return { packagesToRemove: cleanedPackages };
 };

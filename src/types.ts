@@ -1,10 +1,3 @@
-export type PackageJSON = {
-	version: string;
-	name: string;
-	dependencies?: Record<string, string>;
-	devDependencies?: Record<string, string>;
-};
-
 export type ResolvedTopLevelPackages = Record<
 	string,
 	{ version: string; type: DependencyType }
@@ -14,7 +7,12 @@ export type UnResolvedTopLevelPackages = Record<
 	{ range: string; type: DependencyType }
 >;
 
-export type DependencyType = "dependency" | "devDependency";
+export const DEPENDENCY_TYPES = {
+	DEPENDENCIES: "dependencies",
+	DEV_DEPENDENCIES: "devDependencies",
+} as const;
+export type DependencyType =
+	(typeof DEPENDENCY_TYPES)[keyof typeof DEPENDENCY_TYPES];
 
 export type ResolutionGraph = Record<string, ResolvedPackage>;
 export type ResolvedPackage = {

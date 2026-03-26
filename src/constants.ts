@@ -11,3 +11,5 @@ export const PROJECT_ROOT = process.cwd();
 export const MY_PACKAGE_JSON_PATH = path.join(PROJECT_ROOT, "package.json");
 
 export const LOCKFILE_VERSION = 1;
+
+export const PACKAGE_JSON_PATH = "./package.json";

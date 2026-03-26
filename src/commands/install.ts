@@ -1,19 +1,15 @@
-import { isValidMiniPnpmDirectory } from "../lib/getProjectRoot.js";
 import { installPackages } from "../lib/installPackages.js";
-import {
-	collectDependencyEntries,
-	readPackageJSON,
-} from "../lib/packageJson.js";
+import { PackageJSON } from "../lib/packageJSON.js";
+
 import type { CommandFunction } from "../types.js";
 
 export const installCommand: CommandFunction = async () => {
-	if (!isValidMiniPnpmDirectory()) {
-		throw new Error(
-			"No package.json found in this directory. Please run the command from the project root.",
-		);
-	}
+	await handleInstall();
+};
 
-	const packageJson = readPackageJSON();
-	const packages = collectDependencyEntries(packageJson);
+const handleInstall = async (): Promise<void> => {
+	const packageJSON = PackageJSON.fromDisk();
+	const packages = packageJSON.collectDependencyEntries();
+
 	await installPackages(packages);
 };

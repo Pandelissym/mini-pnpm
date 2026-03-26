@@ -1,121 +1,67 @@
-import { isValidMiniPnpmDirectory } from "../lib/getProjectRoot.js";
 import { installPackages } from "../lib/installPackages.js";
 import { Lockfile } from "../lib/lockfile.js";
-import {
-	collectDependencyEntries,
-	readPackageJSON,
-	writePackageJSON,
-} from "../lib/packageJson.js";
-import type {
-	CommandFunction,
-	DependencyType,
-	PackageJSON,
-	ResolvedPackage,
-	UnResolvedTopLevelPackages,
-} from "../types.js";
+import { PackageJSON } from "../lib/packageJSON.js";
+import { parseCLIPackageNameWithRanges } from "../lib/parseCLIPackageNameWithRange.js";
+import type { CliFlags, CommandFunction, DependencyType } from "../types.js";
+
+type ParsedAddCommandArgs = {
+	packagesToAdd: string[];
+};
+
+type ParsedAddCommandFlags = {
+	dependencyType: DependencyType;
+};
 
 export const addCommand: CommandFunction = async (args, flags) => {
-	const packagesToAdd = args;
-	if (!packagesToAdd.length) {
-		throw new Error("A package to be added must be specified");
-	}
+	const { packagesToAdd } = parseAddCommandArgs(args);
+	const { dependencyType } = parseAddCommandFlags(flags);
 
-	if (!isValidMiniPnpmDirectory()) {
-		throw new Error(
-			"No package.json found in this directory. Please run the command from the project root.",
-		);
-	}
+	await handleAdd(packagesToAdd, dependencyType);
+};
 
-	const dependencyType: DependencyType = flags["save-dev"]
-		? "devDependency"
-		: "dependency";
-	const packageJson = readPackageJSON();
-	const packages = collectDependencyEntries(packageJson);
+const handleAdd = async (
+	packagesToAdd: string[],
+	dependencyType: DependencyType,
+): Promise<void> => {
+	const packageJSON = PackageJSON.fromDisk();
+	const packages = packageJSON.collectDependencyEntries();
 
-	const pkgsToAdd = parseCLIPackageNameWithRanges(
+	const parsedPackagesToAdd = parseCLIPackageNameWithRanges(
 		packagesToAdd,
 		dependencyType,
 	);
 
-	const resolutionGraphDiff = await installPackages({
+	const combinedPackagesToAdd = {
 		...packages,
-		...pkgsToAdd,
-	});
+		...parsedPackagesToAdd,
+	};
+
+	const resolutionGraphDiff = await installPackages(combinedPackagesToAdd);
 
 	const updatedLockfile = Lockfile.fromGraph(resolutionGraphDiff.graph);
-
 	updatedLockfile.writeToDisk();
 
-	updatePackageJSON(
-		packageJson,
-		pkgsToAdd,
-		updatedLockfile,
+	packageJSON.updatePackageJSON(
+		parsedPackagesToAdd,
 		resolutionGraphDiff.removed.map(({ pkg }) => pkg),
+		updatedLockfile,
 	);
-
-	writePackageJSON(packageJson);
+	packageJSON.writeToDisk();
 };
 
-const parseCLIPackageNameWithRanges = (
-	entries: string[],
-	dependencyType: DependencyType,
-): UnResolvedTopLevelPackages => {
-	return Object.fromEntries(
-		entries.map((entry) => {
-			const { name, range } = parseCLIPackageNameWithRange(entry);
-			return [name, { range, type: dependencyType }];
-		}),
-	);
-};
-
-const parseCLIPackageNameWithRange = (
-	nameWithRange: string,
-): { name: string; range: string } => {
-	const lastAtIndex = nameWithRange.lastIndexOf("@");
-	let name: string;
-	let range: string;
-
-	if (lastAtIndex === -1 || lastAtIndex === 0) {
-		name = nameWithRange;
-		// if no range specifier is given default to latest
-		range = "latest";
-	} else {
-		name = nameWithRange.slice(0, lastAtIndex);
-		range = nameWithRange.slice(lastAtIndex + 1);
+const parseAddCommandArgs = (args: string[]): ParsedAddCommandArgs => {
+	if (!args.length) {
+		throw new Error("A package to be added must be specified");
 	}
+	const cleanedPackages = args.map((pkg) => pkg.trim());
 
-	return {
-		name,
-		range,
-	};
+	return { packagesToAdd: cleanedPackages };
 };
 
-const updatePackageJSON = (
-	packageJson: PackageJSON,
-	unresolvedPackages: UnResolvedTopLevelPackages,
-	lockfile: Lockfile,
-	resolvedPackagesRemoved: ResolvedPackage[],
-): void => {
-	resolvedPackagesRemoved.forEach((pkg) => {
-		if (pkg.dependencyType === "dependency" && packageJson.dependencies) {
-			delete packageJson.dependencies[pkg.name];
-		} else if (
-			pkg.dependencyType === "devDependency" &&
-			packageJson.devDependencies
-		) {
-			delete packageJson.devDependencies[pkg.name];
-		}
-	});
+const parseAddCommandFlags = (flags: CliFlags): ParsedAddCommandFlags => {
+	const dependencyType: DependencyType = flags["save-dev"]
+		? "devDependencies"
+		: "dependencies";
 
-	for (const [name, { range, type }] of Object.entries(unresolvedPackages)) {
-		const key = type === "dependency" ? "dependencies" : "devDependencies";
-		let cleanedRange = range;
-		if (range === "latest") {
-			cleanedRange = `^${lockfile.getTopLevelPackageVersion(name)}`;
-		}
-		if (!packageJson[key]) {
-			packageJson[key] = {};
-		}
-		packageJson[key][name] = cleanedRange;
-	}
+	return { dependencyType };
 };

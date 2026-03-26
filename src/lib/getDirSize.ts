@@ -4,7 +4,7 @@ import path from "node:path";
 /**
  * Gets the size of a dir (files and subdirs)
  *
- * NOTE: Can be improved by using the sync api
+ * NOTE: Can be improved by using the async api
  * @param dir
  * @returns Size of dir files and all subdirs
  */

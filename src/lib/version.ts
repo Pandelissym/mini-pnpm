@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import { MY_PACKAGE_JSON_PATH } from "../constants.js";
-import type { PackageJSON } from "../types.js";
 
 export const printVersion = (): void => {
 	if (!fs.existsSync(MY_PACKAGE_JSON_PATH)) {
@@ -9,7 +8,7 @@ export const printVersion = (): void => {
 	}
 
 	const packageJsonContents = fs.readFileSync(MY_PACKAGE_JSON_PATH, "utf8");
-	const packageJson = JSON.parse(packageJsonContents) as PackageJSON;
+	const packageJson = JSON.parse(packageJsonContents);
 
 	if (typeof packageJson.version !== "string") {
 		console.debug(`Version field of package.json was not string`);

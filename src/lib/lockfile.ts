@@ -179,12 +179,12 @@ export class Lockfile {
 	private toStoredLockfile(): StoredLockfile {
 		const dependencies = Object.fromEntries(
 			Object.entries(this.topLevelPackages)
-				.filter(([_, { type }]) => type === "dependency")
+				.filter(([_, { type }]) => type === "dependencies")
 				.map(([name, { version }]) => [name, version]),
 		);
 		const devDependencies = Object.fromEntries(
 			Object.entries(this.topLevelPackages)
-				.filter(([_, { type }]) => type === "devDependency")
+				.filter(([_, { type }]) => type === "devDependencies")
 				.map(([name, { version }]) => [name, version]),
 		);
 		return {

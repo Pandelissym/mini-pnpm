@@ -81,23 +81,23 @@ export const installPackages = async (
 
 	linkSubDependencies(graph);
 
-	const newLockfile = Lockfile.fromGraph(graph);
-	newLockfile.writeToDisk();
+	// const newLockfile = Lockfile.fromGraph(graph);
+	// newLockfile.writeToDisk();
 
 	const depRemoves = removed
-		.filter(({ pkg }) => pkg.dependencyType === "dependency")
+		.filter(({ pkg }) => pkg.dependencyType === "dependencies")
 		.map(({ pkg }) => `  - ${pkg.name}@${pkg.version}`)
 		.join("\n");
 	const depAdds = added
-		.filter((pkg) => pkg.dependencyType === "dependency")
+		.filter((pkg) => pkg.dependencyType === "dependencies")
 		.map((pkg) => `  + ${pkg.name}@${pkg.version}`)
 		.join("\n");
 	const devDepRemoves = removed
-		.filter(({ pkg }) => pkg.dependencyType === "devDependency")
+		.filter(({ pkg }) => pkg.dependencyType === "devDependencies")
 		.map(({ pkg }) => `  - ${pkg.name}@${pkg.version}`)
 		.join("\n");
 	const devDepAdds = added
-		.filter((pkg) => pkg.dependencyType === "devDependency")
+		.filter((pkg) => pkg.dependencyType === "devDependencies")
 		.map((pkg) => `  + ${pkg.name}@${pkg.version}`)
 		.join("\n");
 
