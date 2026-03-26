@@ -7,12 +7,15 @@ import {
 	REGISTRY_URL,
 } from "../constants.js";
 import type { RegistryPackageMetadata } from "../types.js";
-import { packageMetadataCache } from "./packageMetadataCache.js";
+import {
+	addToPackageMetadataCache,
+	getPackageMetadataFromCache,
+} from "./packageMetadataCache.js";
 
 export const fetchPackageMetadata = async (
 	name: string,
 ): Promise<RegistryPackageMetadata> => {
-	const cachedManifest = packageMetadataCache?.[name];
+	const cachedManifest = getPackageMetadataFromCache(name);
 	if (cachedManifest) {
 		return cachedManifest;
 	}
@@ -30,6 +33,8 @@ export const fetchPackageMetadata = async (
 		);
 	}
 	const data = await response.json();
+	addToPackageMetadataCache(name, data);
+
 	return data;
 };
 

@@ -1,3 +1,19 @@
-import type { PackageMetadataCache } from "../types.js";
+import type {
+	PackageMetadataCache,
+	RegistryPackageMetadata,
+} from "../types.js";
 
-export const packageMetadataCache: PackageMetadataCache = {};
+const packageMetadataCache: PackageMetadataCache = {};
+
+export const addToPackageMetadataCache = (
+	key: string,
+	value: RegistryPackageMetadata,
+): void => {
+	packageMetadataCache[key] = value;
+};
+
+export const getPackageMetadataFromCache = (
+	key: string,
+): RegistryPackageMetadata | undefined => {
+	return packageMetadataCache[key];
+};

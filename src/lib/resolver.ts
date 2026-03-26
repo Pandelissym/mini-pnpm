@@ -11,7 +11,6 @@ import type {
 import { checkNodeModulesState } from "./linker.js";
 import type { Lockfile } from "./lockfile.js";
 import { logger } from "./logger.js";
-import { packageMetadataCache } from "./packageMetadataCache.js";
 import { createProgressIndicator } from "./progress.js";
 import { fetchPackageMetadata, resolvePackageVersion } from "./registry.js";
 
@@ -105,7 +104,6 @@ const addToResolutionGraph = async (
 		// resolve this package
 		logger.debug(`Resolving package ${name} with range ${range}`);
 		const packageMetadata = await fetchPackageMetadata(name);
-		packageMetadataCache[name] = packageMetadata;
 
 		const resolvedVersion = resolvePackageVersion(packageMetadata, range);
 
@@ -293,7 +291,6 @@ export const resolveDistTags = async (deps: UnResolvedTopLevelPackages) => {
 		const dep = deps[name]!;
 		if (dep.range === "latest") {
 			const packageMetadata = await fetchPackageMetadata(name);
-			packageMetadataCache[name] = packageMetadata;
 			const resolvedVersion = resolvePackageVersion(packageMetadata, dep.range);
 			if (!resolvedVersion) {
 				throw new Error(`Unable to resolve version ${dep.range} of ${name}`);
