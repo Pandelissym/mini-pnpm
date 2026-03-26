@@ -9,3 +9,5 @@ export const MAX_REDIRECTS = 5;
 
 export const PROJECT_ROOT = process.cwd();
 export const MY_PACKAGE_JSON_PATH = path.join(PROJECT_ROOT, "package.json");
+
+export const LOCKFILE_VERSION = 1;

@@ -1,56 +1,110 @@
 import { satisfies } from "semver";
-import type { PackageMetadataCache } from "../types.js";
+import type {
+	DependencyType,
+	LockfileTopLevelMismatches,
+	PackageRemovalType,
+	ResolutionGraph,
+	ResolutionGraphDiff,
+	ResolvedPackage,
+	UnResolvedTopLevelPackages,
+} from "../types.js";
+import { checkNodeModulesState } from "./linker.js";
+import type { Lockfile } from "./lockfile.js";
 import { logger } from "./logger.js";
+import { packageMetadataCache } from "./packageMetadataCache.js";
 import { createProgressIndicator } from "./progress.js";
 import { fetchPackageMetadata, resolvePackageVersion } from "./registry.js";
 
-export type ResolutionGraph = Record<string, ResolvedPackage>;
-export type ResolvedPackage = {
-	name: string;
-	version: string;
-	tarballUrl: string;
-	integrity: string;
-	size: number;
-	isTopLevelDep: boolean | undefined;
-	requestedRange: string;
-	rawDependencies: Record<string, string>; // name -> version range (like package.json)
-	dependencies: Record<string, string>; // name -> exact version
+export const updateResolutionGraph = async (
+	graph: ResolutionGraph,
+	mismatches: LockfileTopLevelMismatches,
+): Promise<ResolutionGraphDiff> => {
+	logger.debug(`${JSON.stringify(mismatches)}`);
+
+	const toRemove = [...mismatches.toRemove, ...mismatches.toFixVersion];
+	const packagesRemoved: {
+		pkg: ResolvedPackage;
+		removalType: PackageRemovalType;
+	}[] = [];
+
+	const allPackagesToRemove = new Set(
+		toRemove
+			.map(({ name, version }) => `${name}@${version}`)
+			.flatMap((pkgKey) => [pkgKey, ...getAllSubDependencies(pkgKey, graph)]),
+	);
+
+	const packagesNeeded = new Set(
+		Object.entries(graph)
+			.filter(([pkgKey, _]) => !allPackagesToRemove.has(pkgKey))
+			.flatMap(([pkgKey, pkg]) => [
+				pkgKey,
+				...Object.entries(pkg.dependencies).map(
+					([name, version]) => `${name}@${version}`,
+				),
+			]),
+	);
+
+	for (const pkgKeyToRemove of allPackagesToRemove) {
+		if (!graph[pkgKeyToRemove]) {
+			continue;
+		}
+		if (!packagesNeeded.has(pkgKeyToRemove)) {
+			packagesRemoved.push({ pkg: graph[pkgKeyToRemove], removalType: "full" });
+			delete graph[pkgKeyToRemove];
+		} else if (graph[pkgKeyToRemove].dependencyType) {
+			packagesRemoved.push({
+				pkg: graph[pkgKeyToRemove],
+				removalType: "only-top-level",
+			});
+		}
+	}
+
+	const toAdd: UnResolvedTopLevelPackages = Object.fromEntries(
+		[...mismatches.toFixVersion, ...mismatches.toAdd].map((entry) => [
+			entry.name,
+			{ range: entry.range, type: entry.dependencyType },
+		]),
+	);
+
+	const packagesAdded = await addToResolutionGraph(toAdd, graph);
+
+	return { graph, added: packagesAdded, removed: packagesRemoved };
 };
 
-export type RootDependencies = Record<string, string>; // name -> version range
-
-export const resolveDeps = async (
-	deps: RootDependencies,
-): Promise<ResolutionGraph> => {
-	const graph: ResolutionGraph = {};
-	const packageMetadataCache: PackageMetadataCache = {};
+const addToResolutionGraph = async (
+	toAdd: UnResolvedTopLevelPackages,
+	graph: ResolutionGraph,
+): Promise<ResolvedPackage[]> => {
+	const pkgKeysAdded = new Set<string>();
 	const progressIndicator = createProgressIndicator(
 		"Resolved",
 		logger.isDebugEnabled(),
 	);
 
-	const queue: Array<{ name: string; range: string; isTopLevelDep?: boolean }> =
-		Object.entries(deps).map(([name, range]) => ({
-			name,
-			range,
-			isTopLevelDep: true,
-		}));
+	const queue: Array<{
+		name: string;
+		range: string;
+		dependencyType: DependencyType | undefined;
+	}> = Object.entries(toAdd).map(([name, { range, type }]) => ({
+		name,
+		range,
+		dependencyType: type,
+	}));
 
 	const queueEntries = new Set<string>(
 		queue.map((entry) => `${entry.name}@${entry.range}`),
 	);
 
+	const rawDependenciesMap: Record<string, Record<string, string>> = {};
+
 	while (queue.length) {
 		// biome-ignore lint/style/noNonNullAssertion: since we know queue is not empty we force
-		const { name, range, isTopLevelDep } = queue.shift()!;
+		const { name, range, dependencyType } = queue.shift()!;
 		queueEntries.delete(`${name}@${range}`);
 
 		// resolve this package
 		logger.debug(`Resolving package ${name} with range ${range}`);
-		const packageMetadata = await fetchPackageMetadata(
-			name,
-			packageMetadataCache,
-		);
+		const packageMetadata = await fetchPackageMetadata(name);
 		packageMetadataCache[name] = packageMetadata;
 
 		const resolvedVersion = resolvePackageVersion(packageMetadata, range);
@@ -67,23 +121,18 @@ export const resolveDeps = async (
 
 		logger.debug(`Resolved to version ${resolvedVersion}`);
 
-		let requestedRange = range;
-		if (range === "latest") {
-			requestedRange = `^${resolvedVersion}`;
-		}
 		// add to graph
 		const key = `${name}@${resolvedVersion}`;
 		graph[key] = {
 			name,
 			version: resolvedVersion,
-			isTopLevelDep,
-			requestedRange,
 			tarballUrl: packageVersionObject.dist.tarball,
-			size: packageVersionObject.dist.unpackedSize,
 			integrity: packageVersionObject.dist.integrity,
-			rawDependencies: packageVersionObject.dependencies ?? {},
+			dependencyType,
 			dependencies: {}, // we don't know exact versions yet so we when we have resolved those
 		};
+		pkgKeysAdded.add(key);
+		rawDependenciesMap[key] = packageVersionObject.dependencies ?? {};
 
 		// add all subdeps to queue
 		const subDeps = packageVersionObject.dependencies || {};
@@ -97,6 +146,7 @@ export const resolveDeps = async (
 				queue.push({
 					name: depName,
 					range: depRange,
+					dependencyType: undefined,
 				});
 				queueEntries.add(`${depName}@${depRange}`);
 			}
@@ -110,10 +160,10 @@ export const resolveDeps = async (
 	// TODO: engines check?
 
 	// go over graph and set the correct dependency versions in each resolved object
-	for (const resolvedPackage of Object.values(graph)) {
-		const rawSubDeps = resolvedPackage.rawDependencies;
+	for (const [resolvedPackageKey, resolvedPackage] of Object.entries(graph)) {
+		const rawSubDeps = rawDependenciesMap[resolvedPackageKey];
 
-		if (!Object.keys(rawSubDeps).length) {
+		if (!rawSubDeps || !Object.keys(rawSubDeps).length) {
 			continue;
 		}
 
@@ -136,7 +186,92 @@ export const resolveDeps = async (
 			}
 		}
 	}
-	return graph;
+
+	const packagesAdded = Object.entries(graph)
+		.filter(([key, _]) => pkgKeysAdded.has(key))
+		.map(([_, pkg]) => pkg);
+
+	return packagesAdded;
+};
+
+const getAllSubDependencies = (
+	pkgKey: string,
+	graph: ResolutionGraph,
+): string[] => {
+	const subDeps = new Set<string>();
+	const queue = [pkgKey];
+	const seen = new Set<string>();
+	while (queue.length) {
+		const depKey = queue.shift();
+		if (!depKey) {
+			break;
+		}
+		seen.add(depKey);
+
+		subDeps.add(depKey);
+		if (graph[depKey]?.dependencies) {
+			for (const [dep, depVersion] of Object.entries(
+				graph[depKey].dependencies,
+			)) {
+				const subDepKey = `${dep}@${depVersion}`;
+				if (!queue.includes(subDepKey) && !seen.has(subDepKey)) {
+					queue.push(subDepKey);
+				}
+			}
+		}
+	}
+
+	return Array.from(subDeps);
+};
+
+export const resolveFreshDeps = async (
+	deps: UnResolvedTopLevelPackages,
+): Promise<ResolutionGraphDiff> => {
+	const graph: ResolutionGraph = {};
+	const packagesAdded = await addToResolutionGraph(deps, graph);
+	return { graph, added: packagesAdded, removed: [] };
+};
+
+export const resolvePackages = async (
+	deps: UnResolvedTopLevelPackages,
+	lockfile?: Lockfile,
+): Promise<ResolutionGraphDiff> => {
+	let resolutionGraphDiff: ResolutionGraphDiff;
+	if (lockfile) {
+		await resolveDistTags(deps);
+		logger.debug(`After resolving dist tags: ${JSON.stringify(deps)}`);
+		const mismatches = lockfile.findMismatches(deps);
+
+		logger.debug(`Lockfile found: Mismatches: ${JSON.stringify(mismatches)}`);
+
+		if (!mismatches) {
+			logger.info(`Lockfile is up to date!`);
+			resolutionGraphDiff = {
+				graph: lockfile.toResolutionGraph(),
+				added: [],
+				removed: [],
+			};
+		} else {
+			resolutionGraphDiff = await updateResolutionGraph(
+				lockfile.toResolutionGraph(),
+				mismatches,
+			);
+		}
+		const missingFromNodeModules = checkNodeModulesState(
+			resolutionGraphDiff.graph,
+		);
+		// do this because checkNodeModulesState might will not register a dep that
+		//  already exists but we are moving it from one dep array to another
+		resolutionGraphDiff.added = Array.from(
+			new Set([...missingFromNodeModules, ...resolutionGraphDiff.added]),
+		);
+	} else {
+		logger.debug(`No lockfile found: Resolving fresh deps.`);
+
+		resolutionGraphDiff = await resolveFreshDeps(deps);
+	}
+
+	return resolutionGraphDiff;
 };
 
 export const findResolvedVersionFromGraph = (
@@ -150,4 +285,20 @@ export const findResolvedVersionFromGraph = (
 		}
 	}
 	return null;
+};
+
+export const resolveDistTags = async (deps: UnResolvedTopLevelPackages) => {
+	for (const name of Object.keys(deps)) {
+		// biome-ignore lint/style/noNonNullAssertion: looping over keys
+		const dep = deps[name]!;
+		if (dep.range === "latest") {
+			const packageMetadata = await fetchPackageMetadata(name);
+			packageMetadataCache[name] = packageMetadata;
+			const resolvedVersion = resolvePackageVersion(packageMetadata, dep.range);
+			if (!resolvedVersion) {
+				throw new Error(`Unable to resolve version ${dep.range} of ${name}`);
+			}
+			dep.range = resolvedVersion;
+		}
+	}
 };

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import type { DepMap, PackageJSON } from "../types.js";
+import type { PackageJSON, UnResolvedTopLevelPackages } from "../types.js";
 
 const PACKAGE_JSON_PATH = "./package.json";
 
@@ -51,9 +51,18 @@ export const removeEntriesFromPackageJSON = (
  * @param packageJson
  * @returns
  */
-export const collectDependencyEntries = (packageJson: PackageJSON): DepMap => {
-	return {
-		...packageJson.devDependencies,
-		...packageJson.dependencies,
-	};
+export const collectDependencyEntries = (
+	packageJson: PackageJSON,
+): UnResolvedTopLevelPackages => {
+	const parsedDependencies = Object.entries(packageJson.dependencies ?? {}).map(
+		([name, range]) => [name, { range, type: "dependency" }],
+	);
+	const parsedDevDependencies = Object.entries(
+		packageJson.devDependencies ?? {},
+	).map(([name, range]) => [name, { range, type: "devDependency" }]);
+	const topLevelPackages: UnResolvedTopLevelPackages = Object.fromEntries([
+		...parsedDependencies,
+		...parsedDevDependencies,
+	]);
+	return topLevelPackages;
 };

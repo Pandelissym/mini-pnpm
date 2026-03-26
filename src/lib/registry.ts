@@ -6,16 +6,13 @@ import {
 	REDIRECT_STATUS_CODES,
 	REGISTRY_URL,
 } from "../constants.js";
-import type {
-	PackageMetadataCache,
-	RegistryPackageMetadata,
-} from "../types.js";
+import type { RegistryPackageMetadata } from "../types.js";
+import { packageMetadataCache } from "./packageMetadataCache.js";
 
 export const fetchPackageMetadata = async (
 	name: string,
-	manifestCache?: PackageMetadataCache,
 ): Promise<RegistryPackageMetadata> => {
-	const cachedManifest = manifestCache?.[name];
+	const cachedManifest = packageMetadataCache?.[name];
 	if (cachedManifest) {
 		return cachedManifest;
 	}

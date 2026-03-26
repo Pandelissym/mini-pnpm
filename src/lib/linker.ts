@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH, PROJECT_ROOT } from "../constants.js";
+import type { ResolutionGraph } from "../types.js";
 import { logger } from "./logger.js";
 import {
 	getPackageStoreKey,
 	pkgKeyToPnpmVirtualStoreKey,
 	splitStringByLastAt,
 } from "./packageKey.js";
-import type { ResolutionGraph } from "./resolver.js";
 
 export const addToVirtualStore = (
 	name: string,
@@ -50,6 +50,17 @@ export const removeFromVirtualStore = (pkgKey: string): void => {
 	logger.debug(`Removed ${pkgKey} from virtual store at ${pkgVirtualStoreDir}`);
 };
 
+export const virtualStoreHardLinkExists = (pkgKey: string): boolean => {
+	const pkgVirtualStoreDir = path.join(
+		PROJECT_ROOT,
+		"node_modules",
+		".pnpm",
+		pkgKeyToPnpmVirtualStoreKey(pkgKey),
+	);
+
+	return fs.existsSync(pkgVirtualStoreDir);
+};
+
 const hardLinkDir = (sourceDir: string, destinationDir: string): void => {
 	if (!fs.existsSync(sourceDir)) {
 		throw new Error(
@@ -76,7 +87,16 @@ export const createTopLevelSymLink = (
 	packageStoreKey: string,
 ): void => {
 	const topLevelDir = path.join(PROJECT_ROOT, "node_modules", name);
-	const target = path.join(".pnpm", packageStoreKey, `node_modules`, name);
+	const amountOfLevelsUp: string[] = new Array(
+		(name.match("/") || []).length,
+	).fill("..");
+	const target = path.join(
+		...amountOfLevelsUp,
+		".pnpm",
+		packageStoreKey,
+		`node_modules`,
+		name,
+	);
 
 	if (symLinkExists(topLevelDir)) {
 		if (fs.readlinkSync(topLevelDir) === target) {
@@ -102,6 +122,12 @@ export const removeTopLevelSymLink = (pkgKey: string): void => {
 	}
 	logger.debug(`Removing ${topLevelSymLinkPath} for key ${pkgKey}`);
 	fs.unlinkSync(topLevelSymLinkPath);
+};
+
+export const topLevelSymLinkExists = (pkgKey: string): boolean => {
+	const [name, _] = splitStringByLastAt(pkgKey);
+	const topLevelSymLinkPath = path.join(PROJECT_ROOT, "node_modules", name);
+	return symLinkExists(topLevelSymLinkPath);
 };
 
 const symLinkExists = (linkPath: string): boolean => {
@@ -146,4 +172,22 @@ export const linkSubDependencies = (graph: ResolutionGraph): void => {
 			fs.symlinkSync(target, source, "dir");
 		}
 	}
+};
+
+export const checkNodeModulesState = (graph: ResolutionGraph) => {
+	const toAdd = [];
+	for (const [key, pkg] of Object.entries(graph)) {
+		if (!virtualStoreHardLinkExists(key)) {
+			toAdd.push(pkg);
+			continue;
+		}
+
+		if (pkg.dependencyType) {
+			if (!topLevelSymLinkExists(key)) {
+				toAdd.push(pkg);
+			}
+		}
+	}
+
+	return toAdd;
 };

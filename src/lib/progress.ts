@@ -19,6 +19,9 @@ export const createProgressBar = (
 		const bar = "￭".repeat(progress) + "･".repeat(BAR_SIZE - progress);
 
 		process.stdout.write(`\r\x1b[K  ${label} [${bar}] ${current}/${total}`);
+		if (current === total) {
+			console.log();
+		}
 	};
 
 	return {

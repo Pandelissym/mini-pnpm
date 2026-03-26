@@ -1,5 +1,4 @@
 import minimist from "minimist";
-import path from "node:path";
 import { commands } from "./commands/commands.js";
 import { printHelp } from "./lib/help.js";
 import { isValidLogLevel, logger } from "./lib/logger.js";
@@ -26,7 +25,7 @@ const cli = async () => {
 	) as CliArgs;
 
 	if (flags.version) {
-		printVersion(path.join(process.cwd(), "package.json"));
+		printVersion();
 		process.exit(0);
 	}
 

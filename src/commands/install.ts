@@ -14,6 +14,6 @@ export const installCommand: CommandFunction = async () => {
 	}
 
 	const packageJson = readPackageJSON();
-	const deps = collectDependencyEntries(packageJson);
-	await installPackages(deps);
+	const packages = collectDependencyEntries(packageJson);
+	await installPackages(packages);
 };
