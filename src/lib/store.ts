@@ -34,7 +34,7 @@ const extractTarball = (data: Buffer, destDir: string): void => {
 
 		const type = header.subarray(156, 156 + 1).toString("utf8");
 
-		const filePath = path.join(destDir, fileName.replace(/^package\//, ""));
+		const filePath = stripTarballRoot(fileName);
 
 		// skip entire header
 		offset += 512;
@@ -53,10 +53,18 @@ const extractTarball = (data: Buffer, destDir: string): void => {
 		offset += Math.ceil(size / 512) * 512;
 	}
 };
+const stripTarballRoot = (filePath: string): string => {
+	const slashIndex = filePath.indexOf("/");
+	if (slashIndex === -1) {
+		return filePath;
+	}
+	return filePath.slice(slashIndex + 1);
+};
 
 export const addToStore = (pkgStoreKey: string, data: Buffer): void => {
 	const destDir = `${GLOBAL_STORE_PATH}/${pkgStoreKey}`;
-
+	logger.debug("IN STORE");
+	logger.debug(destDir);
 	if (fs.existsSync(destDir)) {
 		logger.debug(`${destDir} already exists. Skipping`);
 		return;
