@@ -1,8 +1,8 @@
 import minimist from "minimist";
 import { commands } from "./commands/commands.js";
+import { printVersion } from "./commands/version.js";
 import { printHelp } from "./lib/help.js";
 import { isValidLogLevel, logger } from "./lib/logger.js";
-import { printVersion } from "./lib/version.js";
 import type { CliArgs } from "./types.js";
 import "./constants.js";
 import { isValidMiniPnpmDirectory } from "./lib/getProjectRoot.js";
@@ -19,21 +19,11 @@ const cli = async () => {
 			"log-level": "info",
 		},
 	};
-	if (!isValidMiniPnpmDirectory()) {
-		throw new Error(
-			"No package.json found in this directory. Please run the command from the project root.",
-		);
-	}
 
 	const { _: args, ...flags } = minimist(
 		process.argv.slice(2),
 		options,
 	) as CliArgs;
-
-	if (flags.version) {
-		printVersion();
-		process.exit(0);
-	}
 
 	const logLevel = flags["log-level"];
 	if (logLevel) {
@@ -43,6 +33,17 @@ const cli = async () => {
 			);
 		}
 		logger.setLogLevel(logLevel);
+	}
+
+	if (flags.version) {
+		printVersion();
+		process.exit(0);
+	}
+
+	if (!isValidMiniPnpmDirectory()) {
+		throw new Error(
+			"No package.json found in this directory. Please run the command from the project root.",
+		);
 	}
 
 	const command = args[0];
