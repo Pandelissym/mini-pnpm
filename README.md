@@ -1,13 +1,13 @@
 # mini-pnpm
 
 ![](https://img.shields.io/badge/Learning%20Project-FE7A16?style=for-the-badge)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-3C873A?style=for-the-badge&logo=node.js&logoColor=white)
 ![Inspiration](https://img.shields.io/badge/inspired%20by-pnpm-black?style=for-the-badge)
 
 A minimal package manager inspired by pnpm, built for learning.
 
-`mini-pnpm` resolves package versions from the npm registry, verifies tarball integrity, stores package contents in a global content store, and links dependencies into a local virtual store.
+`mini-pnpm` resolves package versions from the npm registry, verifies tarball integrity, stores package contents in a global content store, and links dependencies into a local virtual store. It writes a **YAML lockfile** (`mini-pnpm-lock.yaml`) so installs are reproducible and the full resolution graph (including transitive dependencies, integrity, and tarball URLs) is recorded.
 
 ## Features
 
@@ -15,23 +15,22 @@ A minimal package manager inspired by pnpm, built for learning.
 - Add dependencies with semver ranges or tags
 - Add dev dependencies with `-D` / `--save-dev`
 - Remove dependencies from `package.json`
+- Lockfile (`mini-pnpm-lock.yaml`): pins the resolved graph, top-level `dependencies` / `devDependencies` versions, and detects when `package.json` is out of sync
 - Use a global store at `~/.mini-pnpm-store`
-- Link packages into `node_modules/.pnpm` and top-level symlinks in `node_modules`
+- Link packages into `node_modules/.pnpm`, top-level symlinks in `node_modules`, and executable symlinks in `node_modules/.bin` when packages declare `bin`
 - Show store status and total store size
+- In-memory metadata cache during a single resolve to avoid duplicate registry fetches for the same package name
 
 ### Planned features
 
-- [ ] Increased security tarball download
-- [ ] Better CLI help output
-- [ ] Lockfile support
+- [ ] Stronger security around tarball download
+- [ ] Richer default help / command-specific help (current `help` output is minimal)
 - [ ] Workspaces support
-- [ ] Parallel downloads
-- [ ] Progress bar
-- [ ] Run scripts
+- [ ] Parallel tarball downloads
+- [ ] Run scripts (`mini-pnpm run …`)
 - [ ] Benchmark
-- [ ] Color coded cli
-- [ ] Support optional dependencies
-- [ ] Support peer dependencies
+- [ ] Optional dependencies
+- [ ] Peer dependencies
 
 ## Requirements
 
@@ -76,12 +75,13 @@ npm run dev -- <command>
 
 - `-v`, `--version`: print version
 - `-D`, `--save-dev`: add as dev dependency (for `add`)
+- `--log-level <level>`: one of `debug`, `info`, `warn`, `error` (default: `info`)
 
 ### Commands
 
 #### install
 
-Install all dependencies and devDependencies from `package.json`.
+Install all dependencies and devDependencies from `package.json`, reconcile with the lockfile, download missing packages, and refresh `mini-pnpm-lock.yaml`.
 
 ```bash
 mini-pnpm install
@@ -105,7 +105,7 @@ Notes:
 
 #### remove
 
-Remove a package from `dependencies` and `devDependencies` in `package.json`.
+Remove a package from `dependencies` and `devDependencies` in `package.json`, then reconcile the lockfile and `node_modules`.
 
 ```bash
 mini-pnpm remove react
@@ -121,29 +121,52 @@ mini-pnpm store status
 
 ## How it works
 
-1. Resolve package metadata from the npm registry.
-2. Resolve the final version from a requested version range/tag.
-3. Download and verify package tarball integrity.
-4. Extract package contents to the global store (`~/.mini-pnpm-store`).
+1. Read `package.json` (and `mini-pnpm-lock.yaml` when present).
+2. Compare top-level dependency ranges with the lockfile; resolve any mismatches or missing entries against the npm registry.
+3. Walk the dependency graph (with metadata cached per package name during the run).
+4. Download tarballs, verify integrity, and extract into the global store (`~/.mini-pnpm-store`).
 5. Hard-link package files into `node_modules/.pnpm/...`.
-6. Create top-level symlinks in `node_modules/<package>`.
+6. Create top-level symlinks in `node_modules/<package>` and bin shims in `node_modules/.bin` where applicable.
+7. Write an updated `mini-pnpm-lock.yaml`.
 
 ## Project scripts
 
 ```bash
-npm run dev      # Run CLI via tsx
-npm run build    # Compile TypeScript to dist/
-npm test         # Run tests
+npm run dev         # Run CLI via tsx
+npm run build       # Compile TypeScript to dist/
+npm run type-check  # tsc --noEmit
+npm run format      # Biome check --fix
+npm test            # Run tests (Vitest)
 ```
 
 ## Project structure
 
 ```text
-bin/              # Executable entrypoint
-src/              # Source code
-src/commands/     # CLI command handlers
-src/lib/          # Registry, store, linker, and utility logic
-dist/             # Compiled output
+bin/                    # Executable entrypoint
+src/
+  cli.ts                # Argument parsing, log level, command dispatch
+  constants.ts          # Paths, registry URL, lockfile version
+  types.ts              # Shared types
+  commands/             # CLI command handlers (install, add, remove, store)
+  lib/
+    resolveAndInstallWorkflow.ts  # resolve → prune → download → link → report
+    resolver.ts         # Resolution graph, lockfile reconcile, registry queue
+    lockfile.ts         # mini-pnpm-lock.yaml read/write and mismatch detection
+    registry.ts         # npm registry fetch, tarball download, redirects
+    store.ts            # Global content store
+    linker.ts           # Virtual store hard links, symlinks, .bin
+    downloadPackages.ts # Verified downloads + progress bar
+    tarball.ts          # Tarball handling
+    packageJSON.ts      # package.json read/write
+    packageIntegrity.ts # Integrity verification
+    packageKey.ts       # Package identity / store keys
+    packageMetadataCache.ts
+    logger.ts           # Leveled, colored logging
+    reporter.ts         # Post-install add/remove summary
+    progress.ts         # Progress bar / resolution indicator
+    help.ts             # Help text (minimal)
+    util/               # e.g. formatBytes
+dist/                   # Compiled output
 ```
 
 ## Notes
