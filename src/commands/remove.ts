@@ -1,3 +1,4 @@
+import { PACKAGE_JSON_PATH } from "../constants.js";
 import { Lockfile } from "../lib/lockfile.js";
 import { PackageJSON } from "../lib/packageJSON.js";
 import { resolveAndInstallWorkflow } from "../lib/resolveAndInstallWorkflow.js";
@@ -14,7 +15,7 @@ export const removeCommand: CommandFunction = async (args, _) => {
 };
 
 const handleRemove = async (packagesToRemove: string[]): Promise<void> => {
-	const packageJSON = PackageJSON.fromDisk();
+	const packageJSON = PackageJSON.fromDisk(PACKAGE_JSON_PATH);
 	packageJSON.removeEntriesFromPackageJSON(packagesToRemove);
 
 	const updatedPackages = packageJSON.collectDependencyEntries();
@@ -28,7 +29,7 @@ const handleRemove = async (packagesToRemove: string[]): Promise<void> => {
 	const updatedLockfile = Lockfile.fromGraph(resolutionGraphDiff.graph);
 	updatedLockfile.writeToDisk();
 
-	packageJSON.writeToDisk();
+	packageJSON.writeToDisk(PACKAGE_JSON_PATH);
 };
 
 const parseRemoveCommandArgs = (args: string[]): ParsedRemoveCommandArgs => {

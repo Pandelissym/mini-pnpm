@@ -1,3 +1,4 @@
+import { PACKAGE_JSON_PATH } from "../constants.js";
 import { Lockfile } from "../lib/lockfile.js";
 import { PackageJSON } from "../lib/packageJSON.js";
 import { parseCLIPackageNameWithRanges } from "../lib/parseCLIPackageNameWithRange.js";
@@ -23,7 +24,7 @@ const handleAdd = async (
 	packagesToAdd: string[],
 	dependencyType: DependencyType,
 ): Promise<void> => {
-	const packageJSON = PackageJSON.fromDisk();
+	const packageJSON = PackageJSON.fromDisk(PACKAGE_JSON_PATH);
 	const packages = packageJSON.collectDependencyEntries();
 
 	const parsedPackagesToAdd = parseCLIPackageNameWithRanges(
@@ -50,7 +51,7 @@ const handleAdd = async (
 		resolutionGraphDiff.removed.map(({ pkg }) => pkg),
 		updatedLockfile,
 	);
-	packageJSON.writeToDisk();
+	packageJSON.writeToDisk(PACKAGE_JSON_PATH);
 };
 
 const parseAddCommandArgs = (args: string[]): ParsedAddCommandArgs => {

@@ -55,7 +55,7 @@ export const updateResolutionGraph = async (
 				pkg: JSON.parse(JSON.stringify(graph[pkgKeyToRemove])),
 				removalType: "only-top-level",
 			});
-			graph[pkgKeyToRemove].dependencyType = undefined
+			graph[pkgKeyToRemove].dependencyType = undefined;
 		}
 	}
 
@@ -128,6 +128,10 @@ const addToResolutionGraph = async (
 			tarballUrl: packageVersionObject.dist.tarball,
 			integrity: packageVersionObject.dist.integrity,
 			dependencyType,
+			bin:
+				typeof packageVersionObject.bin === "string"
+					? { [name]: packageVersionObject.bin }
+					: packageVersionObject.bin,
 			dependencies: {}, // we don't know exact versions yet so we when we have resolved those
 		};
 		pkgKeysAdded.add(key);

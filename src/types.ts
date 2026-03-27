@@ -24,6 +24,7 @@ export type ResolvedPackage = {
 	integrity: string;
 	dependencyType: DependencyType | undefined;
 	dependencies: Record<string, string>; // name -> exact version
+	bin: MergedBin;
 };
 
 export type ResolutionGraphDiff = {
@@ -49,7 +50,11 @@ export type LockfileEntry = {
 	resolved: string;
 	integrity: string;
 	dependencies?: Record<string, string>;
+	bin: MergedBin;
 };
+
+export type MergedBin = Record<string, string> | undefined;
+export type Bin = MergedBin | string;
 
 export type LockfileTopLevelMismatches = {
 	toRemove: {
@@ -101,6 +106,7 @@ type RegistryVersionObject = {
 	version: string;
 	dist: RegistryDistObject;
 	dependencies?: Record<string, string>;
+	bin?: Bin;
 };
 
 type RegistryDistObject = {

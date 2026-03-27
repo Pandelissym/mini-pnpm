@@ -1,23 +1,24 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { PACKAGE_JSON_PATH } from "../constants.js";
-import {
-	DEPENDENCY_TYPES,
-	type DependencyType,
-	type ResolvedPackage,
-	type UnResolvedTopLevelPackages,
+import type {
+	Bin,
+	DependencyType,
+	MergedBin,
+	ResolvedPackage,
+	UnResolvedTopLevelPackages,
 } from "../types.js";
 import type { Lockfile } from "./lockfile.js";
-import { logger } from "./logger.js";
 
 type PackageJSONProps = {
 	version: string;
 	name: string;
 	dependenciesMap: Record<DependencyType, Record<string, string> | undefined>;
+	bin: MergedBin;
 };
 
 type StoredPackageJSON = {
 	version: string;
 	name: string;
+	bin?: Bin;
 } & Record<DependencyType, Record<string, string> | undefined>;
 
 export class PackageJSON {
@@ -27,18 +28,19 @@ export class PackageJSON {
 		DependencyType,
 		Record<string, string> | undefined
 	>;
+	private bin: MergedBin;
 
 	constructor(props: PackageJSONProps) {
 		this.version = props.version;
 		this.name = props.name;
 		this.dependenciesMap = props.dependenciesMap;
+		this.bin = props.bin;
 	}
 
-	writeToDisk() {
-		logger.debug(`${JSON.stringify(this.toObject())}`);
-		const data = JSON.stringify(this.toObject(), null, 2);
+	writeToDisk(path: string) {
+		const data = JSON.stringify(this.mapToObject(), null, 2);
 		const dataWithNewLine = data.endsWith("\n") ? data : `${data}\n`;
-		writeFileSync(PACKAGE_JSON_PATH, dataWithNewLine);
+		writeFileSync(path, dataWithNewLine);
 	}
 
 	collectDependencyEntries(): UnResolvedTopLevelPackages {
@@ -97,35 +99,44 @@ export class PackageJSON {
 		}
 	};
 
-	toObject(): StoredPackageJSON {
+	mapToObject(): StoredPackageJSON {
+		const bin = this.bin
+			? Object.keys(this.bin).length === 1
+				? this.bin[this.name]
+				: this.bin
+			: undefined;
 		return {
 			version: this.version,
 			name: this.name,
+			bin,
 			...this.dependenciesMap,
 		};
 	}
 
-	static fromDisk() {
-		if (!existsSync(PACKAGE_JSON_PATH)) {
-			throw new Error(
-				`No package.json found in ${PACKAGE_JSON_PATH} directory.`,
-			);
+	static fromDisk(path: string) {
+		if (!existsSync(path)) {
+			throw new Error(`No package.json found in ${path} directory.`);
 		}
 
-		const file = readFileSync(PACKAGE_JSON_PATH, "utf8");
+		const file = readFileSync(path, "utf8");
 
 		// add validation here
 		const packageJson = JSON.parse(file) as StoredPackageJSON;
-
 		const dependenciesMap = {
 			dependencies: packageJson.dependencies,
 			devDependencies: packageJson.devDependencies,
 		};
 
+		const bin =
+			typeof packageJson.bin === "string"
+				? { [packageJson.name]: packageJson.bin }
+				: packageJson.bin;
+
 		return new PackageJSON({
 			name: packageJson.name,
 			version: packageJson.version,
 			dependenciesMap,
+			bin,
 		});
 	}
 }

@@ -46,6 +46,7 @@ export class Lockfile {
 				integrity: pkg.integrity,
 				resolved: pkg.tarballUrl,
 				dependencies: pkg.dependencies,
+				bin: pkg.bin,
 			};
 
 			if (pkg.dependencyType) {
@@ -168,6 +169,7 @@ export class Lockfile {
 				integrity: entry.integrity,
 				dependencies: entry.dependencies ?? {},
 				dependencyType: this.getDependencyType(name, entry.version),
+				bin: entry.bin,
 			};
 
 			graph[key] = graphEntry;

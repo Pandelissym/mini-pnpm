@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { GLOBAL_STORE_PATH, PROJECT_ROOT } from "../constants.js";
 import type {
+	MergedBin,
 	ResolutionGraph,
 	ResolutionGraphDiff,
 	ResolvedPackage,
@@ -14,8 +15,11 @@ import {
 } from "./packageKey.js";
 
 export const addToVirtualStore = (pkgKey: string): void => {
+	logger.debug(`${pkgKey}`);
 	const [name, version] = splitStringByLastAt(pkgKey);
 	const pkgStoreKey = getPackageStoreKey(name, version);
+	logger.debug(`${name}`);
+	logger.debug(`${version}`);
 
 	const virtualStoreDir = path.join(
 		PROJECT_ROOT,
@@ -25,12 +29,14 @@ export const addToVirtualStore = (pkgKey: string): void => {
 		`node_modules`,
 		name,
 	);
+	logger.debug(`${virtualStoreDir}`);
 
 	if (fs.existsSync(virtualStoreDir)) {
 		return;
 	}
 
 	const sourceDir = path.join(GLOBAL_STORE_PATH, `${pkgStoreKey}`);
+	logger.debug(`${sourceDir}`);
 
 	hardLinkDir(sourceDir, virtualStoreDir);
 };
@@ -102,16 +108,7 @@ export const createTopLevelSymLink = (pkgKey: string): void => {
 		name,
 	);
 
-	if (symLinkExists(topLevelDir)) {
-		if (fs.readlinkSync(topLevelDir) === target) {
-			return;
-		}
-		fs.unlinkSync(topLevelDir);
-	} else {
-		fs.mkdirSync(path.dirname(topLevelDir), { recursive: true });
-	}
-
-	fs.symlinkSync(target, topLevelDir, "dir");
+	createSymLink(target, topLevelDir);
 };
 
 export const removeTopLevelSymLink = (pkgKey: string): void => {
@@ -164,16 +161,7 @@ export const linkSubDependencies = (packages: ResolvedPackage[]): void => {
 				`node_modules`,
 				depName,
 			);
-			if (symLinkExists(source)) {
-				if (fs.readlinkSync(source) === target) {
-					continue;
-				}
-				fs.unlinkSync(source);
-			} else {
-				fs.mkdirSync(path.dirname(source), { recursive: true });
-			}
-
-			fs.symlinkSync(target, source, "dir");
+			createSymLink(target, source);
 		}
 	}
 };
@@ -181,6 +169,7 @@ export const linkSubDependencies = (packages: ResolvedPackage[]): void => {
 export const checkNodeModulesState = (graph: ResolutionGraph) => {
 	const toAdd = [];
 	for (const [key, pkg] of Object.entries(graph)) {
+		console.log(JSON.stringify(pkg));
 		if (!virtualStoreHardLinkExists(key)) {
 			toAdd.push(pkg);
 			continue;
@@ -188,6 +177,8 @@ export const checkNodeModulesState = (graph: ResolutionGraph) => {
 
 		if (pkg.dependencyType) {
 			if (!topLevelSymLinkExists(key)) {
+				toAdd.push(pkg);
+			} else if (pkg.bin && !binSymLinkExists(key, pkg.bin)) {
 				toAdd.push(pkg);
 			}
 		}
@@ -220,8 +211,73 @@ export const linkPackages = (packages: ResolvedPackage[]): void => {
 		if (dependencyType) {
 			const key = `${name}@${version}`;
 			createTopLevelSymLink(key);
+			if (pkg.bin) {
+				linkBinaries(key, pkg.bin);
+			}
 		}
 	}
 
 	linkSubDependencies(packages);
+};
+
+const linkBinaries = (pkgKey: string, bin: MergedBin): void => {
+	if (!bin) {
+		return;
+	}
+
+	const pkgDir = getPackageDir(pkgKey);
+
+	const binDir = path.join(PROJECT_ROOT, "node_modules", ".bin");
+	fs.mkdirSync(binDir, { recursive: true });
+
+	for (const [name, executablePath] of Object.entries(bin)) {
+		const target = path.join(pkgDir, executablePath);
+		const source = path.join(binDir, name);
+		createSymLink(target, source);
+		logger.debug(`Created symlink from ${source} to ${target}`);
+	}
+};
+
+const getPackageDir = (pkgKey: string): string => {
+	const [name, version] = splitStringByLastAt(pkgKey);
+	const pkgStoreKey = getPackageStoreKey(name, version);
+	return path.join(
+		PROJECT_ROOT,
+		"node_modules",
+		".pnpm",
+		pkgStoreKey,
+		"node_modules",
+		name,
+	);
+};
+
+const binSymLinkExists = (pkgKey: string, bin: MergedBin): boolean => {
+	if (!bin) {
+		return false;
+	}
+	const pkgDir = getPackageDir(pkgKey);
+
+	const binDir = path.join(PROJECT_ROOT, "node_modules", ".bin");
+	for (const [name, executablePath] of Object.entries(bin)) {
+		const target = path.join(pkgDir, executablePath);
+		const source = path.join(binDir, name);
+		const exists = symLinkExists(source) && fs.readlinkSync(source) === target;
+		if (!exists) {
+			return false;
+		}
+	}
+	return true;
+};
+
+const createSymLink = (target: string, source: string): void => {
+	if (symLinkExists(source)) {
+		if (fs.readlinkSync(source) === target) {
+			return;
+		}
+		fs.unlinkSync(source);
+	} else {
+		fs.mkdirSync(path.dirname(source), { recursive: true });
+	}
+
+	fs.symlinkSync(target, source, "dir");
 };

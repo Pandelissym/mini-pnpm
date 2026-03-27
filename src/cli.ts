@@ -70,6 +70,5 @@ cli().catch((error) => {
 		console.error("Unexpected error");
 	}
 	logger.debug(JSON.stringify(error, null, 2));
-	console.info(error)
 	process.exit(1);
 });
