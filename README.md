@@ -129,6 +129,10 @@ mini-pnpm store status
 6. Create top-level symlinks in `node_modules/<package>` and bin shims in `node_modules/.bin` where applicable.
 7. Write an updated `mini-pnpm-lock.yaml`.
 
+## Dependency resolution
+
+For a full explanation of the resolver design and its limitations vs production ready package managers, see [`docs/dependency-resolution.md`](docs/dependency-resolution.md).
+
 ## Project scripts
 
 ```bash
