@@ -72,12 +72,23 @@ From the computed diff:
 - materialize links for new/updated packages
 - write the new lockfile state
 
-
-## Limitations 
+## Limitations
 
 This algorithm is intentionally simplified and does not aim to fully match production package managers.
 
-- No peer dependency solving
-- Limited conflict strategy: resolution focuses on direct requested ranges and transitive traversal, without advanced SAT-style global optimization. In practice, this means the resolver makes local decisions as it walks the graph instead of evaluating all constraints globally with backtracking. This can lead to less-than-optimal outcomes in complex trees (for example, extra duplicated versions or inability to find a globally best compromise among competing constraints).
+### Limited conflict strategy
 
+Production package managers such as generally apply more advanced resolution techniques across the full dependency set (for example, stronger global constraint handling, richer deduplication heuristics, and conflict recovery/backtracking behavior). Other advanced package manager use SAT-style global optimization.
 
+In this implementation resolution focuses on direct requested ranges and transitive traversal. This means the resolver makes local decisions as it walks the graph instead of evaluating all or multiple constraints globally.
+
+When many packages have overlapping but competing version constraints, a solver with some extent of global context would be able to make more informed decisions or try multiple combinations and backtrack until it finds the best valid overall solution. This algorithm does not do that. It resolves incrementally and keeps moving forward.
+
+Because of that, in complex dependency trees it may:
+
+- accept a valid but non-optimal graph (works, but not minimal)
+- keep multiple versions where a global search might unify more aggressively
+- miss better trade-offs that require reconsidering earlier choices
+- be more sensitive to traversal order in edge-case conflict scenarios
+
+### No peer dependency solving
