@@ -139,36 +139,6 @@ npm run format      # Biome check --fix
 npm test            # Run tests (Vitest)
 ```
 
-## Project structure
-
-```text
-bin/                    # Executable entrypoint
-src/
-  cli.ts                # Argument parsing, log level, command dispatch
-  constants.ts          # Paths, registry URL, lockfile version
-  types.ts              # Shared types
-  commands/             # CLI command handlers (install, add, remove, store)
-  lib/
-    resolveAndInstallWorkflow.ts  # resolve → prune → download → link → report
-    resolver.ts         # Resolution graph, lockfile reconcile, registry queue
-    lockfile.ts         # mini-pnpm-lock.yaml read/write and mismatch detection
-    registry.ts         # npm registry fetch, tarball download, redirects
-    store.ts            # Global content store
-    linker.ts           # Virtual store hard links, symlinks, .bin
-    downloadPackages.ts # Verified downloads + progress bar
-    tarball.ts          # Tarball handling
-    packageJSON.ts      # package.json read/write
-    packageIntegrity.ts # Integrity verification
-    packageKey.ts       # Package identity / store keys
-    packageMetadataCache.ts
-    logger.ts           # Leveled, colored logging
-    reporter.ts         # Post-install add/remove summary
-    progress.ts         # Progress bar / resolution indicator
-    help.ts             # Help text (minimal)
-    util/               # e.g. formatBytes
-dist/                   # Compiled output
-```
-
 ## Notes
 
 - This project is for educational purposes and does not implement the full pnpm feature set.
